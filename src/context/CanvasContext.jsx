@@ -210,6 +210,29 @@ export const CanvasProvider = ({ children }) => {
 
   const selectedElement = elements.find(el => el.id === selectedElementId) || null;
 
+  // Add Device Mockup (MacBook, iPhone, iPad, Browser)
+  const addMockupElement = (mockupPreset) => {
+    const preset = mockupPreset || MOCKUP_PRESETS[0];
+    const newEl = {
+      id: `mockup-${Date.now()}`,
+      type: 'mockup',
+      mockupType: preset.mockupType,
+      name: preset.name,
+      x: 180 - pan.x * 0.15,
+      y: 140 - pan.y * 0.15,
+      width: preset.width || 800,
+      height: preset.height || 500,
+      opacity: 100,
+      zIndex: elements.length + 1,
+      deviceColor: preset.deviceColor || '#14161c',
+      borderColor: preset.borderColor || '#2b303e',
+      screenImage: preset.defaultScreenImage || CURATED_IMAGES[0].url,
+      browserUrl: 'https://maisondor-atelier.com'
+    };
+    setElements(prev => [...prev, newEl]);
+    setSelectedElementId(newEl.id);
+  };
+
   // Add 3D Spline Interactive Element
   const addSplineElement = (preset) => {
     const p = preset || SPLINE_3D_PRESETS[0];
