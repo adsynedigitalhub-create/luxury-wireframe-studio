@@ -1,1183 +1,971 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Phone,
-  Mail,
-  MapPin,
-  Globe,
-  ArrowRight,
-  ArrowUpRight,
-  Calendar,
-  Clock,
-  Sparkles,
-  Plus,
-  X,
-  CheckCircle2,
-  Building2,
-  Compass,
-  Layers,
-  ChevronRight,
-  SlidersHorizontal,
-  FileText,
-  Activity,
-  ShieldCheck,
-  Award,
-  Maximize2
-} from 'lucide-react';
-import {
-  ARCHITECTURE_PROJECTS,
-  ARCHITECTURE_CATEGORIES,
-  GLOBAL_STUDIOS
-} from '../../data/architectureProjects';
+import React, { useState, useEffect, useRef } from 'react';
 import { ThreeArchitecturalVideo } from './ThreeArchitecturalVideo';
 
-export const ArchitectureMonographSite = ({ onBackToCanvas, onOpenCodeModal }) => {
-  // Sub-Pages Routing State
-  const [currentSubPage, setCurrentSubPage] = useState('home'); // 'home' | 'works' | 'studios' | 'about' | 'inquiry'
+export function ArchitectureMonographSite({ onBackToCanvas, onOpenCodeModal }) {
+  // Navigation active section tracking
+  const [activeSection, setActiveSection] = useState('hero');
+  const [clocks, setClocks] = useState({
+    zurich: '00:00:00',
+    tokyo: '00:00:00',
+    milan: '00:00:00',
+    nyc: '00:00:00'
+  });
 
-  // Portfolio Filters & Project State
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [projectsList, setProjectsList] = useState(ARCHITECTURE_PROJECTS);
-  const [selectedProject, setSelectedProject] = useState(null);
-
-  // Studios State & Live Clocks
-  const [activeStudioIndex, setActiveStudioIndex] = useState(0);
-  const [worldTimes, setWorldTimes] = useState({});
-
+  // Ticking World Clocks
   useEffect(() => {
-    const updateTimes = () => {
+    const updateTime = () => {
       const now = new Date();
-      const times = {};
-      GLOBAL_STUDIOS.forEach((studio) => {
-        try {
-          const timeStr = now.toLocaleTimeString('en-GB', {
-            timeZone: studio.timezone,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          });
-          times[studio.id] = timeStr;
-        } catch (e) {
-          times[studio.id] = now.toLocaleTimeString();
-        }
+      const formatTime = (tz) =>
+        now.toLocaleTimeString('en-GB', {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+      setClocks({
+        zurich: formatTime('Europe/Zurich'),
+        tokyo: formatTime('Asia/Tokyo'),
+        milan: formatTime('Europe/Rome'),
+        nyc: formatTime('America/New_York')
       });
-      setWorldTimes(times);
     };
-
-    updateTimes();
-    const interval = setInterval(updateTimes, 1000);
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Modals
-  const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
-  const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
-  const [consultationSubmitted, setConsultationSubmitted] = useState(false);
+  // Section 2: Interactive Blueprint-to-Reality Card State
+  const [activeMorphCard, setActiveMorphCard] = useState(0);
+  const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
+  const [sliderPositions, setSliderPositions] = useState({ 0: 50, 1: 50, 2: 50 });
 
-  // New Project Form State
-  const [newProjTitle, setNewProjTitle] = useState('');
-  const [newProjCategory, setNewProjCategory] = useState('commercial');
-  const [newProjLocation, setNewProjLocation] = useState('');
-  const [newProjYear, setNewProjYear] = useState('2026');
-  const [newProjArea, setNewProjArea] = useState('');
-  const [newProjImage, setNewProjImage] = useState('');
-  const [newProjDesc, setNewProjDesc] = useState('');
+  // Section 3: Cinematic Interior Walkthrough Camera Angles
+  const [currentCameraAngle, setCurrentCameraAngle] = useState(0);
+  const [isAutoTourPlaying, setIsAutoTourPlaying] = useState(true);
 
-  // Client Commission Form State
-  const [formTypology, setFormTypology] = useState('Luxury Residential Villa');
-  const [formBudget, setFormBudget] = useState('$2M – $10M');
-  const [formLocation, setFormLocation] = useState('');
-  const [formName, setFormName] = useState('');
-  const [formEmail, setFormEmail] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formBrief, setFormBrief] = useState('');
+  const cameraAngles = [
+    {
+      id: 'blueprint',
+      tag: 'ANGLE 01 // ORTHOGRAPHIC & ISOMETRIC',
+      title: 'Structural CAD Blueprint & Floorplan',
+      desc: 'High-precision BIM vector drafting showing sunken salon, central pool courtyard, guest wing, and cantilevered upper structural core with level marks.',
+      image: '/images/architecture/urban_villa_cad.jpg',
+      fallback: '/images/architecture/arch_phase1_blueprint.jpg',
+      specs: { focal: 'Orthographic 50mm', fStop: 'f/8.0', axis: 'Grid A-F // Level +0.00 to +8.50m', material: 'Reinforced Steel & Monolithic Concrete' }
+    },
+    {
+      id: 'exterior',
+      tag: 'ANGLE 02 // EXTERIOR DUSK CINEMATIC',
+      title: 'City Metropolis Enclave & Illuminated Facade',
+      desc: 'Ground-level dusk perspective capturing the cantilevered upper floor hovering over a turquoise reflection pool with sparkling urban skyline bokeh.',
+      image: '/images/architecture/urban_villa_exterior.jpg',
+      fallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: { focal: 'Wide 24mm Anamorphic', fStop: 'f/2.8', axis: 'West Garden Axis // Golden Dusk', material: 'Honed Roman Travertine & Fluted Basalt' }
+    },
+    {
+      id: 'living',
+      tag: 'ANGLE 03 // INTERIOR SUNKEN SALON',
+      title: 'Double-Height Living Salon & Fireplace',
+      desc: 'Camera moves inside the sunken living room with fluted travertine stone wall, integrated architectural fireplace, and uninterrupted floor-to-ceiling glass pool views.',
+      image: '/images/architecture/urban_villa_living.jpg',
+      fallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: { focal: 'Cinematic 35mm Prime', fStop: 'f/1.8', axis: 'Interior Datum // Courtyard Elevation', material: 'Italian Minotti Boucle, Fumed Oak, Glass' }
+    },
+    {
+      id: 'bedroom',
+      tag: 'ANGLE 04 // CANTILEVER MASTER SANCTUARY',
+      title: 'Upper Cantilever Suite & Skyline Panorama',
+      desc: 'Gliding into the upper master suite with wraparound structural glazing framing the midnight metropolis lights, dark oak acoustic slats, and marble ensuite soaking tub.',
+      image: '/images/architecture/urban_villa_bedroom.jpg',
+      fallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: { focal: 'Portrait 50mm T1.5', fStop: 'f/1.4', axis: 'Upper Horizon // 360 Metropolis Glazing', material: 'Calacatta Paonazzo Marble & Fluted Glass' }
+    }
+  ];
+
+  // Auto-advance camera tour if playing
+  useEffect(() => {
+    if (!isAutoTourPlaying) return;
+    const tourTimer = setInterval(() => {
+      setCurrentCameraAngle((prev) => (prev + 1) % cameraAngles.length);
+    }, 6000);
+    return () => clearInterval(tourTimer);
+  }, [isAutoTourPlaying, cameraAngles.length]);
+
+  // Project Morphing Cards Data
+  const morphProjects = [
+    {
+      id: 'villa-zurich',
+      code: 'ATV-V01',
+      title: 'Villa Aethelgard Residence',
+      city: 'Zurich Goldcoast, Switzerland',
+      area: '1,450 m²',
+      span: '12.4m Floating Cantilever',
+      cadImage: '/images/architecture/urban_villa_cad.jpg',
+      cadFallback: '/images/architecture/arch_phase1_blueprint.jpg',
+      realImage: '/images/architecture/urban_villa_exterior.jpg',
+      realFallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: ['Monolithic Post-Tensioned Slabs', 'Low-Iron Triple Glazing (U=0.5)', 'Heated Basalt Stone Decking'],
+      narrative: 'A private metropolitan sanctuary balancing heavy travertine mass with razor-thin structural glass edges suspended directly over reflective water.'
+    },
+    {
+      id: 'villa-milan',
+      code: 'ATV-V02',
+      title: 'Palazzo Urbano Solarium',
+      city: 'Milano City San Siro, Italy',
+      area: '1,820 m²',
+      span: 'Double-Height Internal Biophilic Atrium',
+      cadImage: '/images/architecture/arch_phase1_blueprint.jpg',
+      cadFallback: '/images/architecture/urban_villa_cad.jpg',
+      realImage: '/images/architecture/urban_villa_living.jpg',
+      realFallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: ['Fluted Roman Travertine Veneer', 'Sub-Zero Geothermal Climatization', 'Integrated Linear Fireplace'],
+      narrative: 'A sunken architectural living pavilion engineered for seamless indoor-outdoor transition between living salon and courtyard reflection pool.'
+    },
+    {
+      id: 'villa-geneva',
+      code: 'ATV-V03',
+      title: 'Céleste Cantilever Observatory',
+      city: 'Lake Geneva Enclave, Switzerland',
+      area: '2,100 m²',
+      span: '16.8m Panoramic Corner Glazing',
+      cadImage: '/images/architecture/urban_villa_cad.jpg',
+      cadFallback: '/images/architecture/arch_phase1_blueprint.jpg',
+      realImage: '/images/architecture/urban_villa_bedroom.jpg',
+      realFallback: '/images/architecture/arch_phase3_reality.jpg',
+      specs: ['Fumed French Oak Paneling', 'Acoustic Sound Decoupling Walls', 'Calacatta Marble Monolithic Tub'],
+      narrative: 'An elevated private sanctuary capturing sweeping metropolitan city lights through uninterrupted structural silicone corner joints.'
+    }
+  ];
+
+  // Inquiry Form State
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    typology: 'Private Urban Villa',
+    location: '',
+    budget: '$15M — $30M',
+    message: ''
+  });
 
-  // Handle Adding New Project
-  const handleAddNewProject = (e) => {
+  const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (!newProjTitle.trim()) return;
-
-    const createdProject = {
-      id: `proj-custom-${Date.now()}`,
-      number: String(projectsList.length + 1).padStart(2, '0'),
-      title: newProjTitle,
-      category: ARCHITECTURE_CATEGORIES.find(c => c.key === newProjCategory)?.label || 'Custom Project',
-      categoryKey: newProjCategory,
-      location: newProjLocation || 'Global Atelier Project',
-      year: newProjYear || '2026',
-      area: newProjArea || '5,000 m²',
-      height: 'Parametric Topology',
-      materials: 'Architectural Ultra-Performance Concrete & Glass',
-      image: newProjImage || '/images/architecture/skyscraper_landmark.jpg',
-      description: newProjDesc || 'Bespoke architectural commission engineered with sustainable parametric computational modeling and timeless materiality.',
-      leadArchitect: 'Atelier Vanguard Design Council'
-    };
-
-    setProjectsList([createdProject, ...projectsList]);
-    setIsAddProjectModalOpen(false);
-    setNewProjTitle('');
-    setNewProjLocation('');
-    setNewProjArea('');
-    setNewProjImage('');
-    setNewProjDesc('');
+    setFormSubmitted(true);
   };
 
-  // Filtered projects
-  const filteredProjects = activeCategory === 'all'
-    ? projectsList
-    : projectsList.filter(p => p.categoryKey === activeCategory);
-
-  const activeStudio = GLOBAL_STUDIOS[activeStudioIndex] || GLOBAL_STUDIOS[0];
+  const scrollToSection = (id) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#fcfbf9] text-[#1f242e] font-sans selection:bg-[#f05a36] selection:text-white relative overflow-x-hidden">
-      {/* ─────────────────────────────────────────────────────────────
-          1. HAUTE LUXURY EDITORIAL NAVIGATION HEADER
-          (Brand Logo + 'ATV' Mark + 5 Sub-Page Tabs + Animated Call Button)
-         ───────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[#fcfbf9]/95 backdrop-blur-md border-b border-[#e5e7eb] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo Brand with 'ATV' 3-Letter Mark Underneath */}
-          <div
-            onClick={() => setCurrentSubPage('home')}
-            className="flex items-center space-x-3 group cursor-pointer"
-          >
-            <div className="w-11 h-11 bg-[#1f242e] rounded-sm flex items-center justify-center text-white font-bold text-lg shadow-md border border-gray-300 transition group-hover:bg-[#f05a36]">
-              <Building2 className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-[#0b0d11] text-[#f3f4f6] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#f05a36] selection:text-white antialiased overflow-x-hidden">
+      
+      {/* ========================================================================= */}
+      {/* 1. CINEMATIC HERO WITH IN-HERO INTEGRATED HEADER & 3D TIMELAPSE VIDEO     */}
+      {/* ========================================================================= */}
+      <section id="hero" className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden border-b border-white/10">
+        
+        {/* Full Background 3D Three.js Autonomous Video Timelapse */}
+        <div className="absolute inset-0 z-0">
+          <ThreeArchitecturalVideo />
+          {/* Subtle cinematic gradient scrim for ultra-focused high contrast text */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d11]/95 via-[#0b0d11]/70 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d11] via-transparent to-[#0b0d11]/80 pointer-events-none" />
+          {/* Architectural Subtle Background Grid Lines */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
+        </div>
+
+        {/* IN-HERO INTEGRATED LUXURY HEADER (Overlaying Top of Full Hero Visual) */}
+        <header className="relative z-30 w-full px-6 lg:px-14 py-6 flex items-center justify-between border-b border-white/10 bg-[#0b0d11]/40 backdrop-blur-md">
+          {/* Atelier Monogram & Brand Logo */}
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 border border-[#f05a36] bg-[#f05a36]/10 flex items-center justify-center font-['Cinzel',serif] font-bold text-white text-lg tracking-widest shadow-[0_0_20px_rgba(240,90,54,0.3)]">
+              AV
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center space-x-2">
-                <span className="font-serif text-lg font-bold tracking-widest text-[#1f242e] uppercase">
-                  ATELIER VANGUARD
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f05a36]" />
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-mono text-[10px] text-[#f05a36] font-extrabold tracking-[0.45em] uppercase">
-                  ATV
-                </span>
-                <span className="font-mono text-[9px] text-gray-500 tracking-wider">
-                  / GLOBAL ARCHITECTURE ATELIER
-                </span>
-              </div>
+            <div>
+              <span className="block font-['Cinzel',serif] font-bold text-white tracking-[0.25em] text-sm uppercase">
+                Atelier Vanguard
+              </span>
+              <span className="block text-[10px] tracking-[0.3em] text-[#f05a36] uppercase font-mono">
+                Architectural Monograph // Zurich &bull; Milan
+              </span>
             </div>
           </div>
 
-          {/* 5 Dedicated Sub-Page Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-8 font-serif text-xs tracking-widest uppercase font-semibold">
-            {[
-              { id: 'home', label: '01. Home' },
-              { id: 'works', label: '02. Works' },
-              { id: 'studios', label: '03. Studios' },
-              { id: 'about', label: '04. About' },
-              { id: 'inquiry', label: '05. Inquiry' }
-            ].map((tab) => {
-              const isActive = currentSubPage === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setCurrentSubPage(tab.id)}
-                  className={`relative py-2 transition ${
-                    isActive ? 'text-[#f05a36] font-bold' : 'text-gray-600 hover:text-[#1f242e]'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="navUnderline"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#f05a36]"
-                    />
-                  )}
-                </button>
-              );
-            })}
+          {/* In-Hero Section Jump Anchors */}
+          <nav className="hidden lg:flex items-center space-x-8 text-xs font-mono tracking-widest uppercase">
+            <button
+              onClick={() => scrollToSection('blueprint-reality')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">01.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">Morphing Cards</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('interior-tour')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">02.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">3D Room Tour</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('works')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">03.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">Villas Portfolio</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('rnd-lab')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">04.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">Materials Lab</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('studios')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">05.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">Studios</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('inquiry')}
+              className="text-white/80 hover:text-[#f05a36] transition flex items-center space-x-1.5 group"
+            >
+              <span className="text-[#f05a36]">06.</span>
+              <span className="group-hover:translate-x-0.5 transition-transform">Commission</span>
+            </button>
           </nav>
 
-          {/* Action CTA: Animated Framer Motion Book Free Call Button */}
-          <div className="flex items-center space-x-3">
-            {onBackToCanvas && (
-              <button
-                onClick={onBackToCanvas}
-                className="hidden lg:flex items-center space-x-1 px-3 py-1.5 rounded-sm border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-mono text-xs transition shadow-sm"
-                title="Switch to Studio Canvas"
-              >
-                <span>🎨 Canvas</span>
-              </button>
-            )}
-
-            <motion.button
-              whileHover={{ scale: 1.04, boxShadow: '0 4px 20px rgba(240, 90, 54, 0.35)' }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsConsultationModalOpen(true)}
-              className="relative group overflow-hidden px-4 sm:px-5 py-2.5 rounded-sm bg-[#f05a36] text-white font-bold text-xs uppercase tracking-wider flex items-center space-x-2 shadow-md shadow-[#f05a36]/20 border border-[#e04825]"
-            >
-              <motion.span
-                animate={{ rotate: [0, 15, -15, 0] }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-              >
-                <Phone className="w-3.5 h-3.5 text-white" />
-              </motion.span>
-              <span>Book Free Call</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
-            </motion.button>
-          </div>
-        </div>
-      </header>
-
-      {/* ─────────────────────────────────────────────────────────────
-          SUB-PAGE 1: HOME (THE FULL-BLEED UNBOXED 3D VIDEO EXPERIENCE)
-         ───────────────────────────────────────────────────────────── */}
-      {currentSubPage === 'home' && (
-        <main className="relative">
-          {/* Full-Bleed 100vw x 100vh Hero: CAD Blueprint ➔ Construction with Crane ➔ Finished Villa */}
-          <section className="relative w-full h-[90vh] min-h-[640px] overflow-hidden">
-            {/* Automatic Three.js WebGL Video (Zero Buttons, Loops Automatically) */}
-            <ThreeArchitecturalVideo />
-
-            {/* Left-Side Floating 3D Chiseled Typography (NO BOXES, DIRECT ON BACKGROUND) */}
-            <div className="absolute inset-y-0 left-0 z-30 flex items-center pointer-events-none">
-              <div className="max-w-xl pl-6 sm:pl-12 lg:pl-16 space-y-6 pointer-events-auto">
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/85 backdrop-blur-md border border-gray-300 font-mono text-[10px] text-[#f05a36] font-bold tracking-widest uppercase shadow-sm">
-                  <Activity className="w-3 h-3 animate-pulse" />
-                  <span>CAD BLUEPRINT • TOWER CRANE • REALITY</span>
-                </div>
-
-                <div className="space-y-3">
-                  <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight uppercase text-[#1f242e] leading-[1.08] drop-shadow-sm">
-                    CONCEIVING <br />
-                    <span className="text-[#f05a36]">MONUMENTS</span> <br />
-                    FROM DRAFT TO REALITY.
-                  </h1>
-                  <div className="h-1.5 w-24 bg-[#f05a36] rounded-full" />
-                </div>
-
-                <p className="font-sans text-sm sm:text-base text-gray-700 leading-relaxed font-light text-justify max-w-lg">
-                  Atelier Vanguard engineers the complete continuum of built architecture: from precision CAD elevations and structural tower crane logistics to finished travertine cantilever residences.
-                </p>
-
-                {/* Metric Strip (Floating, No Box) */}
-                <div className="grid grid-cols-3 gap-6 pt-2 border-t border-gray-300 font-mono text-xs">
-                  <div>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-[#f05a36] block font-serif">42+</span>
-                    <span className="text-[9px] uppercase tracking-wider text-gray-600 block mt-0.5">BUILT LANDMARKS</span>
-                  </div>
-                  <div>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-[#1f242e] block font-serif">100%</span>
-                    <span className="text-[9px] uppercase tracking-wider text-gray-600 block mt-0.5">CARBON NEUTRAL</span>
-                  </div>
-                  <div>
-                    <span className="text-2xl lg:text-3xl font-extrabold text-amber-600 block font-serif">$2.4B</span>
-                    <span className="text-[9px] uppercase tracking-wider text-gray-600 block mt-0.5">COMMISSIONS</span>
-                  </div>
-                </div>
-
-                {/* Floating CTAs */}
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  <button
-                    onClick={() => setCurrentSubPage('works')}
-                    className="px-6 py-3 bg-[#f05a36] hover:bg-[#1f242e] text-white font-bold text-xs uppercase tracking-widest rounded-sm transition shadow-lg shadow-[#f05a36]/25 flex items-center space-x-2"
-                  >
-                    <span>View Built Works</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentSubPage('studios')}
-                    className="px-6 py-3 bg-white/85 hover:bg-white text-[#1f242e] border border-gray-300 font-bold text-xs uppercase tracking-widest rounded-sm transition shadow-sm flex items-center space-x-2 backdrop-blur-md"
-                  >
-                    <Globe className="w-4 h-4 text-[#f05a36]" />
-                    <span>Global Studios</span>
-                  </button>
-                </div>
-              </div>
+          {/* Studio Telemetry & Commission CTA */}
+          <div className="flex items-center space-x-5">
+            <div className="hidden sm:flex items-center space-x-2 text-[11px] font-mono text-white/70 bg-white/5 border border-white/10 px-3 py-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>ZURICH {clocks.zurich}</span>
             </div>
-          </section>
-
-          {/* Section: Architectural Editorial Split (NO BOXES) */}
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-gray-200">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              {/* Left Side: Haute Luxury Architecture Narrative */}
-              <div className="lg:col-span-5 space-y-6">
-                <span className="font-mono text-xs text-[#f05a36] font-bold tracking-[0.25em] uppercase block">
-                  THE ATELIER VANGUARD METHODOLOGY
-                </span>
-                <h2 className="font-serif text-3xl sm:text-4xl font-extrabold uppercase text-[#1f242e] tracking-tight leading-tight">
-                  INTEGRATED ENGINEERING: <br />
-                  <span className="text-[#f05a36]">FROM SOIL TO SKY.</span>
-                </h2>
-                <div className="h-1 w-20 bg-[#f05a36]" />
-
-                <p className="text-sm text-gray-600 font-sans leading-relaxed text-justify">
-                  Every landmark we construct is treated as an integrated organism. We conduct parametric fluid wind dynamics, structural steel strain optimization, and mass-timber carbon sequestration from day one of drafting.
-                </p>
-
-                <div className="space-y-4 pt-2 font-mono text-xs">
-                  <div className="border-l-2 border-[#f05a36] pl-4 space-y-1">
-                    <span className="text-gray-900 font-bold block">01. COMPUTATIONAL LOD-400 BIM</span>
-                    <p className="text-gray-500 font-sans text-xs">Full digital twin modeling before a single shovel enters the construction site.</p>
-                  </div>
-                  <div className="border-l-2 border-[#f05a36] pl-4 space-y-1">
-                    <span className="text-gray-900 font-bold block">02. SEISMIC DIAGRID OPTIMIZATION</span>
-                    <p className="text-gray-500 font-sans text-xs">Faceted aerodynamic cantilevers that save 34% structural steel while offering 360-degree vistas.</p>
-                  </div>
-                  <div className="border-l-2 border-[#f05a36] pl-4 space-y-1">
-                    <span className="text-gray-900 font-bold block">03. TIMELESS MATERIAL SELECTION</span>
-                    <p className="text-gray-500 font-sans text-xs">Roman travertine, volcanic basalt, carbon-neutral concrete, and acoustic low-iron glass.</p>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={() => setCurrentSubPage('about')}
-                    className="text-xs font-mono text-[#f05a36] hover:text-[#1f242e] font-bold flex items-center space-x-1 group"
-                  >
-                    <span>Read Leadership Manifesto</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Right Side: Massive Unboxed Visuals (High-Rise Skyscraper) */}
-              <div className="lg:col-span-7 space-y-4">
-                <div className="relative aspect-[16/10] overflow-hidden rounded-sm border border-gray-200 shadow-xl group">
-                  <img
-                    src="/images/architecture/skyscraper_landmark.jpg"
-                    alt="Titan Tower Skyscraper"
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                  />
-                  <div className="absolute bottom-4 left-4 right-4 p-3 bg-white/90 backdrop-blur-md border border-gray-200 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="font-mono text-[10px] text-[#f05a36] font-bold block">FEATURED SKYSCRAPER</span>
-                      <span className="font-serif font-bold text-gray-900">The Monolith Titan Tower — Zurich</span>
-                    </div>
-                    <span className="font-mono text-[10px] text-gray-600">340m / 78 Stories</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SUB-PAGE 2: WORKS (DEDICATED FULLSCREEN ARCHITECTURAL PORTFOLIO)
-         ───────────────────────────────────────────────────────────── */}
-      {currentSubPage === 'works' && (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Header & Categories */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4 border-b border-gray-200 pb-6">
-            <div>
-              <span className="font-mono text-[10px] text-[#f05a36] tracking-[0.3em] uppercase font-bold block mb-1">
-                PORTFOLIO MONOGRAPHS
-              </span>
-              <h2 className="font-serif text-3xl sm:text-4xl font-extrabold uppercase text-[#1f242e] tracking-tight">
-                SELECTED ARCHITECTURAL WORKS
-              </h2>
-            </div>
-
             <button
-              onClick={() => setIsAddProjectModalOpen(true)}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-sm bg-[#1f242e] hover:bg-[#f05a36] text-white font-mono text-xs uppercase tracking-wider transition shadow-sm"
+              onClick={() => scrollToSection('inquiry')}
+              className="px-5 py-2 text-xs font-mono uppercase tracking-widest bg-[#f05a36] hover:bg-[#d94827] text-white font-bold transition shadow-[0_0_25px_rgba(240,90,54,0.4)]"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Custom Project</span>
+              Inquire
             </button>
           </div>
+        </header>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-8 font-mono text-xs">
-            {ARCHITECTURE_CATEGORIES.map(cat => (
-              <button
-                key={cat.key}
-                onClick={() => setActiveCategory(cat.key)}
-                className={`px-4 py-2 rounded-sm whitespace-nowrap transition uppercase tracking-wider font-semibold ${
-                  activeCategory === cat.key
-                    ? 'bg-[#f05a36] text-white shadow-sm'
-                    : 'bg-white text-gray-600 hover:text-black border border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Unboxed Fluid Works Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((proj) => (
-              <motion.div
-                key={proj.id}
-                layout
-                whileHover={{ y: -6 }}
-                onClick={() => setSelectedProject(proj)}
-                className="group cursor-pointer space-y-3"
-              >
-                <div className="relative aspect-[16/10] overflow-hidden rounded-sm border border-gray-200 shadow-sm bg-gray-100">
-                  <img
-                    src={proj.image}
-                    alt={proj.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-md font-mono text-[10px] text-[#f05a36] font-bold border border-gray-200">
-                    #{proj.number}
-                  </div>
-                  <div className="absolute top-3 right-3 px-2 py-1 bg-white/90 backdrop-blur-md font-mono text-[9px] text-gray-700 border border-gray-200">
-                    {proj.year}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="font-mono text-[10px] text-[#f05a36] uppercase tracking-wider block">
-                    {proj.category}
-                  </span>
-                  <h3 className="font-serif text-lg font-bold text-[#1f242e] group-hover:text-[#f05a36] transition">
-                    {proj.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 font-sans line-clamp-2 leading-relaxed">
-                    {proj.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between font-mono text-[10px] text-gray-500 border-t border-gray-200 pt-2">
-                  <span className="flex items-center space-x-1">
-                    <MapPin className="w-3 h-3 text-[#f05a36]" />
-                    <span>{proj.location}</span>
-                  </span>
-                  <span className="font-semibold text-gray-800">{proj.area}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </main>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SUB-PAGE 3: STUDIOS (DEDICATED GLOBAL COMMAND HUB & WORLD CLOCKS)
-         ───────────────────────────────────────────────────────────── */}
-      {currentSubPage === 'studios' && (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
-            <span className="font-mono text-xs text-[#f05a36] font-bold tracking-[0.3em] uppercase block">
-              GLOBAL COMMAND STUDIOS
+        {/* HERO FOCUSED EDITORIAL CONTENT (Left Side Massive Bold Architecture) */}
+        <div className="relative z-20 flex-1 px-6 lg:px-14 py-16 flex flex-col justify-center max-w-4xl">
+          
+          {/* Architectural Coordinate Beacon */}
+          <div className="inline-flex items-center space-x-3 mb-6 bg-black/60 border border-white/15 px-4 py-1.5 backdrop-blur-md w-fit">
+            <span className="w-2 h-2 rounded-full bg-[#f05a36] shadow-[0_0_8px_#f05a36]" />
+            <span className="text-xs font-mono tracking-widest text-white uppercase">
+              BIM 4D // MONUMENTAL URBAN RESIDENCES
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-extrabold uppercase text-[#1f242e] tracking-tight">
-              4 CONTINENTAL ATELIERS & RESEARCH HUBS
-            </h2>
-            <p className="text-xs text-gray-600 font-sans">
-              Operating seamlessly across global time zones from structural engineering headquarters in Zurich to computational robotics in Tokyo.
+            <span className="text-xs font-mono text-white/40">|</span>
+            <span className="text-xs font-mono text-[#f05a36] tracking-wider">
+              N 47° 22' 40" E 8° 32' 28"
+            </span>
+          </div>
+
+          {/* Massive Cinematic Bold Headline */}
+          <h1 className="font-['Syne',sans-serif] font-extrabold text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight text-white uppercase leading-[0.92] mb-8 drop-shadow-2xl">
+            Pure <br />
+            <span className="font-['Cinzel',serif] italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-200 to-neutral-400">
+              Architecture
+            </span> <br />
+            <span className="text-[#f05a36]">In Motion.</span>
+          </h1>
+
+          {/* Architectural Manifesto Rationale */}
+          <p className="text-lg md:text-xl text-neutral-300 font-light leading-relaxed max-w-2xl mb-10 drop-shadow-lg">
+            Hum CAD wireframe blueprints aur active construction sites se shuru karke real-world luxury travertine city villas ko generate karte hain. Har structure ek cinematic visual route hai jahan pure geometry aur physical reality aapas mein milti hain.
+          </p>
+
+          {/* Action CTAs & Specifications Bar */}
+          <div className="flex flex-wrap items-center gap-5">
+            <button
+              onClick={() => scrollToSection('blueprint-reality')}
+              className="px-8 py-4 bg-[#f05a36] hover:bg-[#d94827] text-white font-mono uppercase text-xs tracking-[0.2em] font-bold transition flex items-center space-x-3 shadow-[0_0_30px_rgba(240,90,54,0.45)] group"
+            >
+              <span>Explore Morphing Cards</span>
+              <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+            </button>
+            <button
+              onClick={() => scrollToSection('interior-tour')}
+              className="px-8 py-4 border border-white/30 hover:border-white bg-black/40 hover:bg-white/10 backdrop-blur-md text-white font-mono uppercase text-xs tracking-[0.2em] transition"
+            >
+              Enter 3D Room Tour
+            </button>
+          </div>
+        </div>
+
+        {/* HERO BOTTOM STATUS STRIP */}
+        <div className="relative z-20 w-full px-6 lg:px-14 py-4 border-t border-white/10 bg-[#0b0d11]/70 backdrop-blur-md grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+          <div className="border-l border-[#f05a36] pl-3">
+            <span className="block text-white/50 text-[10px] uppercase">EVOLUTION TIMELAPSE</span>
+            <span className="text-white font-bold">CAD &rarr; CRANE &rarr; REAL VILLA</span>
+          </div>
+          <div className="border-l border-white/20 pl-3">
+            <span className="block text-white/50 text-[10px] uppercase">GLOBAL STUDIO CLOCKS</span>
+            <span className="text-white font-bold">MIL {clocks.milan} // TYO {clocks.tokyo}</span>
+          </div>
+          <div className="border-l border-white/20 pl-3">
+            <span className="block text-white/50 text-[10px] uppercase">MONOLITHIC SCALE</span>
+            <span className="text-white font-bold">12.4M CANTILEVER OVER POOL</span>
+          </div>
+          <div className="border-l border-[#f05a36] pl-3 flex items-center justify-between">
+            <div>
+              <span className="block text-white/50 text-[10px] uppercase">3D CINEMATIC VIEW</span>
+              <span className="text-[#f05a36] font-bold">AUTONOMOUS NO BUTTONS</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================================================= */}
+      {/* 2. INTERACTIVE BLUEPRINT-TO-REALITY MORPHING CARDS                        */}
+      {/* ========================================================================= */}
+      <section id="blueprint-reality" className="relative w-full py-28 px-6 lg:px-14 border-b border-white/10 bg-[#0c0e14]">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Section Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-white/10">
+            <div>
+              <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase mb-3">
+                <span>// ARCHITECTURAL MORPHING MATRIX</span>
+              </div>
+              <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+                Blueprint &rarr; Reality
+              </h2>
+            </div>
+            <p className="mt-4 md:mt-0 text-sm font-mono text-white/70 max-w-md text-right">
+              Card par mouse le jayein ya interactive split drag karein — technical CAD architectural blueprint foran real finished luxury villa mein transform ho jati hai.
             </p>
           </div>
 
-          {/* Interactive City Selector with Live World Clocks */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            {GLOBAL_STUDIOS.map((studio, idx) => {
-              const isActive = activeStudioIndex === idx;
-              const liveTime = worldTimes[studio.id] || '12:00:00';
+          {/* Grid of Interactive Morphing Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {morphProjects.map((project, idx) => {
+              const isHovered = hoveredCardIndex === idx;
+              const sliderPos = sliderPositions[idx] || 50;
+
               return (
-                <button
-                  key={studio.id}
-                  onClick={() => setActiveStudioIndex(idx)}
-                  className={`p-4 rounded-sm border text-left transition relative ${
-                    isActive
-                      ? 'bg-white border-[#f05a36] shadow-md'
-                      : 'bg-[#f7f7f8] border-gray-200 hover:border-gray-400 hover:bg-white'
-                  }`}
+                <div
+                  key={project.id}
+                  onMouseEnter={() => setHoveredCardIndex(idx)}
+                  onMouseLeave={() => setHoveredCardIndex(null)}
+                  className="group relative bg-[#12151d] border border-white/15 overflow-hidden transition-all duration-500 hover:border-[#f05a36] shadow-2xl flex flex-col"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-serif text-sm font-bold text-[#1f242e]">
-                      {studio.city}
-                    </span>
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
-                      {studio.flag}
+                  {/* Top Technical Metadata Bar */}
+                  <div className="p-4 border-b border-white/10 flex items-center justify-between text-[11px] font-mono bg-black/50">
+                    <span className="text-[#f05a36] font-bold">{project.code}</span>
+                    <span className="text-white/80">{project.city}</span>
+                    <span className="px-2 py-0.5 bg-white/10 text-white text-[10px] tracking-wider uppercase">
+                      {isHovered ? 'REALITY VISUAL' : 'CAD BLUEPRINT'}
                     </span>
                   </div>
 
-                  <div className="font-mono text-lg font-extrabold text-[#f05a36] tracking-tight flex items-center space-x-1.5">
-                    <Clock className="w-3.5 h-3.5 text-gray-500" />
-                    <span>{liveTime}</span>
-                  </div>
-
-                  <span className="font-mono text-[9px] text-gray-500 uppercase tracking-wider block mt-1">
-                    {studio.utcOffset} • {studio.country}
-                  </span>
-
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeStudioTab"
-                      className="absolute bottom-0 left-0 right-0 h-1 bg-[#f05a36]"
+                  {/* Visual Morphing Canvas (Video Style Transition) */}
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-black select-none">
+                    
+                    {/* Layer 1: Real Luxury Villa Photograph (Revealed on Hover / Split) */}
+                    <img
+                      src={project.realImage}
+                      alt={`${project.title} Finished Reality`}
+                      onError={(e) => { e.target.src = project.realFallback; }}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                  )}
-                </button>
+
+                    {/* Layer 2: Architectural CAD Blueprint (Top overlay with clip-path or smooth crossfade) */}
+                    <div
+                      className="absolute inset-0 transition-opacity duration-700 ease-out"
+                      style={{
+                        opacity: isHovered ? 0.05 : 1.0,
+                        transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}
+                    >
+                      <img
+                        src={project.cadImage}
+                        alt={`${project.title} CAD Blueprint`}
+                        onError={(e) => { e.target.src = project.cadFallback; }}
+                        className="w-full h-full object-cover filter contrast-125 brightness-90"
+                      />
+                      {/* Blueprint Grid Overlay Lines */}
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00ffff15_1px,transparent_1px),linear-gradient(to_bottom,#00ffff15_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] pointer-events-none" />
+                      
+                      {/* Badge indicating CAD Mode */}
+                      <div className="absolute top-3 left-3 bg-black/80 border border-cyan-400/40 px-2.5 py-1 text-[10px] font-mono text-cyan-300">
+                        &bull; CAD BLUEPRINT [AXIS A-F]
+                      </div>
+                    </div>
+
+                    {/* Hover Reality Indicator Badge */}
+                    <div
+                      className="absolute bottom-3 right-3 bg-[#f05a36] text-white px-3 py-1 text-[10px] font-mono font-bold tracking-widest uppercase transition-opacity duration-300 shadow-lg"
+                      style={{ opacity: isHovered ? 1 : 0 }}
+                    >
+                      REALITY 4K VISUAL &bull; HOVER ACTIVE
+                    </div>
+                  </div>
+
+                  {/* Bottom Information Rationale */}
+                  <div className="p-6 flex-1 flex flex-col justify-between bg-[#11141b]">
+                    <div>
+                      <h3 className="font-['Syne',sans-serif] font-bold text-2xl text-white mb-2 group-hover:text-[#f05a36] transition-colors">
+                        {project.title}
+                      </h3>
+                      <p className="text-xs text-neutral-300 font-light leading-relaxed mb-4">
+                        {project.narrative}
+                      </p>
+                    </div>
+
+                    {/* Technical Specification Chips */}
+                    <div className="pt-4 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-white/50 uppercase">GROSS FLOOR AREA</span>
+                        <span className="text-white font-bold">{project.area}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-white/50 uppercase">CANTILEVER SPAN</span>
+                        <span className="text-[#f05a36] font-bold">{project.span}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
+        </div>
+      </section>
 
-          {/* Unboxed Studio Detail Showcase */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center border-t border-gray-200 pt-8">
-            {/* Studio Photograph */}
-            <div className="lg:col-span-6 relative aspect-[4/3] rounded-sm overflow-hidden border border-gray-200 shadow-md group">
-              <img
-                src={activeStudio.studioImage}
-                alt={activeStudio.city + ' Atelier'}
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-              />
-              <div className="absolute bottom-4 left-4 right-4 p-3 bg-white/90 backdrop-blur-md border border-gray-200 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[#f05a36] font-mono font-bold block text-[10px]">REGIONAL HUB</span>
-                  <span className="font-serif font-bold text-gray-900">{activeStudio.city} Atelier</span>
-                </div>
-                <span className="font-mono text-[10px] text-gray-600">{activeStudio.elevation}</span>
+
+      {/* ========================================================================= */}
+      {/* 3. CINEMATIC INTERIOR WALKTHROUGH ("ROOM-BY-ROOM 3D CAMERA TOUR")         */}
+      {/* ========================================================================= */}
+      <section id="interior-tour" className="relative w-full py-28 px-6 lg:px-14 border-b border-white/10 bg-[#090a0e] overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Section Header */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12">
+            <div>
+              <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase mb-3">
+                <span className="w-2 h-2 rounded-full bg-[#f05a36] animate-ping" />
+                <span>// CINEMATIC ROOM WALKTHROUGH WITH CAMERA ANGLES</span>
               </div>
-            </div>
-
-            {/* Studio Narrative & Contacts */}
-            <div className="lg:col-span-6 space-y-5">
-              <span className="font-mono text-xs text-[#f05a36] font-bold uppercase tracking-widest block">
-                {activeStudio.role}
-              </span>
-              <h3 className="font-serif text-2xl sm:text-3xl font-extrabold uppercase text-[#1f242e]">
-                {activeStudio.city} Atelier & Materials Lab
-              </h3>
-              <p className="text-xs text-gray-600 font-sans leading-relaxed text-justify">
-                {activeStudio.focus}. Our {activeStudio.city} office houses computational simulation clusters and rapid prototyping machinery for live architectural testing.
-              </p>
-
-              <div className="grid grid-cols-3 gap-3 border-t border-b border-gray-200 py-3 font-mono text-[11px]">
-                <div>
-                  <span className="text-gray-500 block text-[9px]">COORDINATES:</span>
-                  <span className="text-[#1f242e] font-bold">{activeStudio.gpsCoords}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block text-[9px]">TEAM CAPACITY:</span>
-                  <span className="text-[#1f242e] font-bold">{activeStudio.teamSize}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block text-[9px]">ACTIVE COMMISSIONS:</span>
-                  <span className="text-[#f05a36] font-bold">{activeStudio.activeCommissions} Landmarks</span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-[#f8f9fa] border-l-4 border-[#f05a36] text-xs space-y-1">
-                <span className="font-mono text-[10px] text-gray-500 uppercase block">DIRECTOR IN CHARGE:</span>
-                <span className="font-serif font-bold text-gray-900 text-sm block">{activeStudio.leadArchitect}</span>
-                <span className="text-gray-600 font-sans block">{activeStudio.address}</span>
-                <div className="pt-2 flex items-center space-x-4 font-mono text-xs">
-                  <a href={`tel:${activeStudio.phone}`} className="text-[#f05a36] hover:underline font-bold">
-                    {activeStudio.phone}
-                  </a>
-                  <a href={`mailto:${activeStudio.email}`} className="text-gray-600 hover:text-black">
-                    {activeStudio.email}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SUB-PAGE 4: ABOUT (LEADERSHIP & ARCHITECTURAL ETHOS)
-         ───────────────────────────────────────────────────────────── */}
-      {currentSubPage === 'about' && (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left: Different Architect Portrait Image */}
-            <div className="lg:col-span-5 relative group">
-              <div className="relative aspect-[3/4] rounded-sm overflow-hidden border border-gray-300 shadow-xl bg-gray-100">
-                <img
-                  src="/images/architecture/architect_partner.jpg"
-                  alt="Alexander Van Der Rohe, Design Director"
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                />
-                <div className="absolute bottom-4 left-4 right-4 p-3 bg-white/90 backdrop-blur-md border border-gray-200">
-                  <span className="font-mono text-[10px] text-[#f05a36] uppercase font-bold tracking-wider block">
-                    DESIGN DIRECTOR & SENIOR PARTNER
-                  </span>
-                  <h4 className="font-serif text-sm font-bold text-[#1f242e]">Alexander Van Der Rohe</h4>
-                  <span className="font-mono text-[9px] text-gray-500 block">M.Arch ETH Zurich • Registered SIA Architect</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Leadership Manifesto */}
-            <div className="lg:col-span-7 space-y-6">
-              <span className="font-mono text-xs text-[#f05a36] uppercase font-bold tracking-widest block">
-                ARCHITECTURAL LEADERSHIP & ETHOS
-              </span>
-
-              <div className="space-y-2">
-                <h2 className="font-serif text-3xl sm:text-4xl font-extrabold uppercase text-[#1f242e] tracking-tight leading-tight">
-                  YOU ARE WELCOME! <br />
-                  <span className="text-[#f05a36]">CRAFTING HUMAN DIGNITY</span> IN STEEL & STONE.
-                </h2>
-                <div className="h-1 w-20 bg-[#f05a36]" />
-              </div>
-
-              <p className="text-sm text-gray-700 font-sans leading-relaxed text-justify font-light">
-                &ldquo;True contemporary architecture is neither nostalgic pastiche nor digital exhibitionism. It is the radical orchestration of weight, proportion, daylight, and materiality into structures that elevate human consciousness.&rdquo;
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 font-sans text-xs">
-                <div className="p-4 bg-white border border-gray-200 rounded-sm space-y-1 shadow-sm">
-                  <span className="font-bold text-gray-900 block font-serif">Pritzker & Mies Nominee</span>
-                  <p className="text-gray-600 leading-relaxed text-[11px]">
-                    Recipient of European Civic Architecture Medals and RIBA International Awards.
-                  </p>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 rounded-sm space-y-1 shadow-sm">
-                  <span className="font-bold text-gray-900 block font-serif">LOD-400 BIM Directorship</span>
-                  <p className="text-gray-600 leading-relaxed text-[11px]">
-                    Pioneering algorithmic structural optimization and mass-timber sequestration.
-                  </p>
-                </div>
-              </div>
-
-              {/* Hand-signed Cursive Signature Simulation */}
-              <div className="pt-4 flex items-center justify-between border-t border-gray-200">
-                <div>
-                  <span className="font-serif text-3xl text-[#f05a36] italic tracking-wide block font-light">
-                    Alexander v.d. Rohe
-                  </span>
-                  <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">
-                    DIRECTOR OF DESIGN COUNCIL
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-xs font-mono text-gray-500">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Verified Principal Signature</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          SUB-PAGE 5: INQUIRY (COMMISSION BRIEF & VIDEO CONSULTATION)
-         ───────────────────────────────────────────────────────────── */}
-      {currentSubPage === 'inquiry' && (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            {/* Left Column: Brief Manifesto */}
-            <div className="lg:col-span-5 space-y-6">
-              <span className="font-mono text-xs text-[#f05a36] tracking-[0.3em] uppercase font-bold block">
-                COMMISSION AN ARCHITECTURAL MONUMENT
-              </span>
-              <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#1f242e] uppercase tracking-tight">
-                LET US ENGINEER YOUR NEXT LANDMARK
+              <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+                Inside The City Villa
               </h2>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-sans text-justify">
-                Whether you are envisioning a private cliffside estate, an institutional museum, or an urban commercial supertower, our partners review every architectural commission with personalized rigor.
-              </p>
+            </div>
+            
+            {/* Tour Controls */}
+            <div className="mt-6 lg:mt-0 flex items-center space-x-4">
+              <button
+                onClick={() => setIsAutoTourPlaying(!isAutoTourPlaying)}
+                className={`px-4 py-2 text-xs font-mono uppercase tracking-wider font-bold border transition ${
+                  isAutoTourPlaying
+                    ? 'border-[#f05a36] bg-[#f05a36]/20 text-white'
+                    : 'border-white/30 text-white/70 hover:text-white'
+                }`}
+              >
+                {isAutoTourPlaying ? '⏸ Pause Auto Tour' : '▶ Play Auto Tour'}
+              </button>
+            </div>
+          </div>
 
-              <div className="p-4 bg-white border-l-4 border-[#f05a36] rounded-sm space-y-2 text-xs border border-gray-200 shadow-sm">
-                <span className="font-bold text-[#1f242e] block">Our Client Engagement Commitment:</span>
-                <ul className="space-y-1.5 text-gray-600 list-disc list-inside font-sans">
-                  <li>Direct partner consultation within 48 business hours</li>
-                  <li>Complimentary geodetic & zoning pre-feasibility analysis</li>
-                  <li>LOD-400 parametric BIM budget forecasting</li>
-                </ul>
+          {/* Giant Cinematic Viewport */}
+          <div className="relative w-full aspect-[16/9] lg:aspect-[21/9] bg-black border border-white/20 overflow-hidden shadow-2xl">
+            
+            {/* Active Camera Image */}
+            <img
+              src={cameraAngles[currentCameraAngle].image}
+              alt={cameraAngles[currentCameraAngle].title}
+              onError={(e) => { e.target.src = cameraAngles[currentCameraAngle].fallback; }}
+              className="w-full h-full object-cover transition-all duration-1000 transform scale-100 hover:scale-102"
+            />
+
+            {/* Dark Dramatic Gradient Scrims for text focus */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-transparent pointer-events-none" />
+
+            {/* Viewport Floating HUD Metadata (Top) */}
+            <div className="absolute top-6 left-6 right-6 flex items-center justify-between text-xs font-mono text-white/90">
+              <div className="bg-black/75 border border-white/20 px-3 py-1.5 backdrop-blur-md">
+                <span className="text-[#f05a36] font-bold">{cameraAngles[currentCameraAngle].tag}</span>
               </div>
-
-              <div className="p-4 bg-[#f8f9fa] rounded-sm border border-gray-200 text-xs space-y-2">
-                <span className="font-mono text-[10px] text-[#f05a36] font-bold uppercase block">
-                  SCHEDULE PARTNER CALL DIRECTLY:
-                </span>
-                <p className="text-gray-600">
-                  Prefer an immediate face-to-face video consultation?
-                </p>
-                <button
-                  onClick={() => setIsConsultationModalOpen(true)}
-                  className="px-4 py-2 bg-[#1f242e] hover:bg-[#f05a36] text-white font-mono text-xs uppercase tracking-wider rounded-sm transition"
-                >
-                  Schedule Video Session
-                </button>
+              <div className="hidden sm:flex items-center space-x-3 bg-black/75 border border-white/20 px-3 py-1.5 backdrop-blur-md">
+                <span>FOCAL: {cameraAngles[currentCameraAngle].specs.focal}</span>
+                <span>&bull;</span>
+                <span>APERTURE: {cameraAngles[currentCameraAngle].specs.fStop}</span>
               </div>
             </div>
 
-            {/* Right Column: Unboxed Form */}
-            <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-sm border border-gray-200 shadow-md">
-              {formSubmitted ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-8 text-center space-y-4"
-                >
-                  <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto" />
-                  <h3 className="font-serif text-xl font-bold text-[#1f242e]">
-                    Commission Brief Successfully Transmitted
+            {/* Viewport Lower Content (Bottom Left Focused Narrative) */}
+            <div className="absolute bottom-6 left-6 right-6 lg:right-auto lg:max-w-2xl bg-black/85 border border-white/20 p-6 backdrop-blur-md">
+              <span className="text-[10px] font-mono text-[#f05a36] tracking-[0.25em] uppercase block mb-1">
+                LOCATION: {cameraAngles[currentCameraAngle].specs.axis}
+              </span>
+              <h3 className="font-['Syne',sans-serif] font-bold text-2xl sm:text-3xl text-white mb-2">
+                {cameraAngles[currentCameraAngle].title}
+              </h3>
+              <p className="text-xs sm:text-sm text-neutral-300 font-light leading-relaxed mb-4">
+                {cameraAngles[currentCameraAngle].desc}
+              </p>
+              <div className="text-[11px] font-mono text-white/70 flex items-center space-x-2">
+                <span className="text-white/40 uppercase">PRIMARY MATERIAL:</span>
+                <span className="text-white font-bold">{cameraAngles[currentCameraAngle].specs.material}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Camera Angle Selector Buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            {cameraAngles.map((cam, idx) => (
+              <button
+                key={cam.id}
+                onClick={() => {
+                  setCurrentCameraAngle(idx);
+                  setIsAutoTourPlaying(false);
+                }}
+                className={`p-4 text-left border transition-all ${
+                  currentCameraAngle === idx
+                    ? 'border-[#f05a36] bg-[#f05a36]/15 shadow-[0_0_20px_rgba(240,90,54,0.3)]'
+                    : 'border-white/10 bg-[#12151e] hover:border-white/30 text-white/70'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-mono mb-1">
+                  <span className={currentCameraAngle === idx ? 'text-[#f05a36] font-bold' : 'text-white/40'}>
+                    0{idx + 1}. CAM
+                  </span>
+                  {currentCameraAngle === idx && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f05a36]" />
+                  )}
+                </div>
+                <h4 className="font-bold text-white text-xs sm:text-sm truncate">
+                  {cam.title}
+                </h4>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================================================= */}
+      {/* 4. MONUMENTAL WORKS & VILLA CATALOG                                       */}
+      {/* ========================================================================= */}
+      <section id="works" className="relative w-full py-28 px-6 lg:px-14 border-b border-white/10 bg-[#0c0e14]">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-white/10">
+            <div>
+              <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase mb-3">
+                <span>// SELECT MONUMENTAL COMMISSIONS</span>
+              </div>
+              <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+                Architectural Works
+              </h2>
+            </div>
+            <div className="mt-4 md:mt-0 text-sm font-mono text-white/70">
+              COMMISSION TYPOLOGIES: PRIVATE VILLAS // URBAN MASTERPLANS
+            </div>
+          </div>
+
+          {/* Large Editorial Project Showcases */}
+          <div className="space-y-16">
+            
+            {/* Feature 1: Monolithic Travertine City Villa */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/15 bg-[#12151e] p-6 lg:p-10">
+              <div className="lg:col-span-7 relative aspect-[16/10] overflow-hidden border border-white/10">
+                <img
+                  src="/images/architecture/urban_villa_exterior.jpg"
+                  alt="Metropolis Sanctuary Villa"
+                  onError={(e) => { e.target.src = '/images/architecture/arch_phase3_reality.jpg'; }}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute top-4 left-4 bg-black/80 border border-white/20 px-3 py-1 text-xs font-mono text-white">
+                  ATV-W01 // ZURICH METROPOLIS
+                </div>
+              </div>
+              <div className="lg:col-span-5 space-y-6">
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-[#f05a36] tracking-widest uppercase">
+                    COMPLETED 2025 // RESIDENTIAL MONOGRAPH
+                  </span>
+                  <h3 className="font-['Syne',sans-serif] font-bold text-3xl sm:text-4xl text-white">
+                    Villa Solarium Lakefront
                   </h3>
-                  <p className="text-xs text-gray-600 max-w-md mx-auto">
-                    Thank you. Your project brief has been delivered directly to Henrik Vane and Alexander Van Der Rohe for confidential feasibility review.
+                </div>
+                <p className="text-sm text-neutral-300 font-light leading-relaxed">
+                  Ek private urban residence jo lakefront Zurich ke paas monolithic reinforced post-tensioned slabs aur 360-degree acoustic glazed facade par banai gayi hai. Is mein central courtyard reflection pool aur double-height sunken salon shaamil hain.
+                </p>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 text-xs font-mono">
+                  <div>
+                    <span className="block text-white/40 uppercase">GROSS FOOTPRINT</span>
+                    <span className="text-white font-bold">1,680 M²</span>
+                  </div>
+                  <div>
+                    <span className="block text-white/40 uppercase">STRUCTURAL SPAN</span>
+                    <span className="text-[#f05a36] font-bold">14.2M CANTILEVER</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 2: Alpine Cliffside Villa */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/15 bg-[#12151e] p-6 lg:p-10">
+              <div className="lg:col-span-5 space-y-6 order-2 lg:order-1">
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-[#f05a36] tracking-widest uppercase">
+                    COMPLETED 2024 // HIGH RESIDENTIAL
+                  </span>
+                  <h3 className="font-['Syne',sans-serif] font-bold text-3xl sm:text-4xl text-white">
+                    Aethelgard Clifftop Observatory
+                  </h3>
+                </div>
+                <p className="text-sm text-neutral-300 font-light leading-relaxed">
+                  Granite cliff edge par anchored modern architectural wonder. Suspended infinity pool valley ke upar float karti hai aur corner structural glass joints uninterrupted alpine horizons offer karte hain.
+                </p>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 text-xs font-mono">
+                  <div>
+                    <span className="block text-white/40 uppercase">FOUNDATION MAT</span>
+                    <span className="text-white font-bold">MICROPILINGS IN GRANITE</span>
+                  </div>
+                  <div>
+                    <span className="block text-white/40 uppercase">THERMAL RATING</span>
+                    <span className="text-[#f05a36] font-bold">PASSIVE HOUSE CERTIFIED</span>
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-7 relative aspect-[16/10] overflow-hidden border border-white/10 order-1 lg:order-2">
+                <img
+                  src="/images/architecture/arch_phase3_reality.jpg"
+                  alt="Aethelgard Clifftop Observatory"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute top-4 right-4 bg-black/80 border border-white/20 px-3 py-1 text-xs font-mono text-white">
+                  ATV-W02 // VALAIS ALPS
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================================================= */}
+      {/* 5. COMPUTATIONAL DESIGN & MATERIALS LAB (R&D)                             */}
+      {/* ========================================================================= */}
+      <section id="rnd-lab" className="relative w-full py-28 px-6 lg:px-14 border-b border-white/10 bg-[#090a0e]">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="mb-16 pb-6 border-b border-white/10">
+            <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase mb-3">
+              <span>// ENGINEERING & COMPUTATIONAL MATERIALITY</span>
+            </div>
+            <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+              Materials Laboratory
+            </h2>
+            <p className="mt-4 text-sm font-mono text-white/70 max-w-2xl">
+              Hamari engineering laboratory structural physics, parametric algorithms aur zero-carbon concrete ke saath building limits ko push karti hai.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-8 border border-white/15 bg-[#12151e]">
+              <span className="text-3xl font-['Cinzel',serif] text-[#f05a36] font-bold block mb-4">01</span>
+              <h4 className="font-['Syne',sans-serif] font-bold text-xl text-white mb-2">
+                Post-Tensioned Monoliths
+              </h4>
+              <p className="text-xs text-neutral-300 font-light leading-relaxed mb-6">
+                Internal high-tensile steel cables jo concrete slabs ko 16+ meters tak bina kisi column support ke cantilever hone dete hain.
+              </p>
+              <div className="pt-4 border-t border-white/10 text-xs font-mono text-white/60">
+                DEFLECTION TOLERANCE &lt; L/600
+              </div>
+            </div>
+
+            <div className="p-8 border border-white/15 bg-[#12151e]">
+              <span className="text-3xl font-['Cinzel',serif] text-[#f05a36] font-bold block mb-4">02</span>
+              <h4 className="font-['Syne',sans-serif] font-bold text-xl text-white mb-2">
+                Low-Iron Acoustic Glazing
+              </h4>
+              <p className="text-xs text-neutral-300 font-light leading-relaxed mb-6">
+                Triple laminated solar-control glass sheets with structural silicone corner butts for completely frameless vistas.
+              </p>
+              <div className="pt-4 border-t border-white/10 text-xs font-mono text-white/60">
+                LIGHT TRANSMITTANCE 78% // U-VALUE 0.5
+              </div>
+            </div>
+
+            <div className="p-8 border border-white/15 bg-[#12151e]">
+              <span className="text-3xl font-['Cinzel',serif] text-[#f05a36] font-bold block mb-4">03</span>
+              <h4 className="font-['Syne',sans-serif] font-bold text-xl text-white mb-2">
+                Thermal Mass Travertine
+              </h4>
+              <p className="text-xs text-neutral-300 font-light leading-relaxed mb-6">
+                Directly quarried Italian honed travertine with sub-surface geothermal loops for natural radiant climate stabilization.
+              </p>
+              <div className="pt-4 border-t border-white/10 text-xs font-mono text-white/60">
+                LIFETIME ENDURANCE &gt; 150 YEARS
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================================================= */}
+      {/* 6. GLOBAL STUDIOS FOOTPRINT & DIRECTORS                                    */}
+      {/* ========================================================================= */}
+      <section id="studios" className="relative w-full py-28 px-6 lg:px-14 border-b border-white/10 bg-[#0c0e14]">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-6 border-b border-white/10">
+            <div>
+              <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase mb-3">
+                <span>// INTERNATIONAL PRESENCE</span>
+              </div>
+              <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+                Global Studios
+              </h2>
+            </div>
+            <div className="mt-4 md:mt-0 text-sm font-mono text-white/70">
+              4 ATELIERS // 42 COMMISSIONS ACTIVE
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                city: 'Zurich (HQ)',
+                country: 'Switzerland',
+                address: 'Gotthardstrasse 28, 8002',
+                time: clocks.zurich,
+                director: 'Henrik Vane',
+                active: '14 Commissions'
+              },
+              {
+                city: 'Milano',
+                country: 'Italy',
+                address: 'Via Montenapoleone 14, 20121',
+                time: clocks.milan,
+                director: 'Alexander Van Der Rohe',
+                active: '11 Commissions'
+              },
+              {
+                city: 'Tokyo',
+                country: 'Japan',
+                address: 'Minami-Aoyama 5-Chome, 107',
+                time: clocks.tokyo,
+                director: 'Kenzo Tange Studio',
+                active: '9 Commissions'
+              },
+              {
+                city: 'New York',
+                country: 'United States',
+                address: 'Crosby Street, SoHo 10012',
+                time: clocks.nyc,
+                director: 'Elena Rostova',
+                active: '8 Commissions'
+              }
+            ].map((st, i) => (
+              <div key={i} className="p-6 border border-white/15 bg-[#12151e] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-mono text-[#f05a36] mb-3">
+                    <span>{st.country}</span>
+                    <span className="text-white font-bold">{st.time}</span>
+                  </div>
+                  <h4 className="font-['Syne',sans-serif] font-bold text-2xl text-white mb-2">
+                    {st.city}
+                  </h4>
+                  <p className="text-xs font-mono text-white/60 mb-6">
+                    {st.address}
                   </p>
-                  <button
-                    onClick={() => setFormSubmitted(false)}
-                    className="px-5 py-2.5 rounded-sm bg-[#f05a36] text-white font-mono text-xs uppercase tracking-wider font-bold shadow-sm"
-                  >
-                    Transmit Another Brief
-                  </button>
-                </motion.div>
+                </div>
+                <div className="pt-4 border-t border-white/10 text-xs font-mono">
+                  <span className="block text-white/40 uppercase">PARTNER IN CHARGE</span>
+                  <span className="text-white font-bold">{st.director}</span>
+                  <span className="block text-[#f05a36] mt-1">{st.active}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================================================= */}
+      {/* 7. PRIVATE VILLA COMMISSIONING & INQUIRY                                   */}
+      {/* ========================================================================= */}
+      <section id="inquiry" className="relative w-full py-28 px-6 lg:px-14 bg-[#090a0e]">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="lg:col-span-5 space-y-6">
+              <div className="inline-flex items-center space-x-2 text-[#f05a36] font-mono text-xs tracking-widest uppercase">
+                <span>// PRIVATE COMMISSION PROTOCOL</span>
+              </div>
+              <h2 className="font-['Syne',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl text-white uppercase tracking-tight">
+                Initiate A Commission
+              </h2>
+              <p className="text-neutral-300 text-sm font-light leading-relaxed">
+                Hamari firm har saal sirf limited private villa commissions accept karti hai taake har structure ko highest architectural precision aur craftsmanship di ja sake.
+              </p>
+              
+              <div className="space-y-4 pt-6 border-t border-white/10 text-xs font-mono">
+                <div>
+                  <span className="block text-white/40 uppercase">DIRECT ENCRYPTED LINE</span>
+                  <a href="tel:+41442889000" className="text-white hover:text-[#f05a36] font-bold transition">
+                    +41 44 288 9000
+                  </a>
+                </div>
+                <div>
+                  <span className="block text-white/40 uppercase">CONFIDENTIAL DOSSIERS</span>
+                  <a href="mailto:commissions@vanguard-atelier.com" className="text-white hover:text-[#f05a36] font-bold transition">
+                    commissions@vanguard-atelier.com
+                  </a>
+                </div>
+                <div>
+                  <span className="block text-white/40 uppercase">CHIEF OF ARCHITECTURAL PROTOCOL</span>
+                  <span className="text-[#f05a36] font-bold">Atelier Vanguard Advisory Council</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Commission Form */}
+            <div className="lg:col-span-7 bg-[#12151e] border border-white/15 p-8 lg:p-12">
+              {formSubmitted ? (
+                <div className="p-8 border border-emerald-500/40 bg-emerald-500/10 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full border border-emerald-400 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">
+                    ✓
+                  </div>
+                  <h3 className="font-['Syne',sans-serif] font-bold text-2xl text-white">
+                    Commission Request Received
+                  </h3>
+                  <p className="text-xs font-mono text-neutral-300 max-w-md mx-auto">
+                    Aapka architectural brief Atelier Council ko transmit ho chuka hai. 24 ghante ke andar principal partner aap se confidential briefing schedule karega.
+                  </p>
+                </div>
               ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setFormSubmitted(true);
-                  }}
-                  className="space-y-4 text-xs"
-                >
-                  <div>
-                    <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                      PROJECT TYPOLOGY:
-                    </label>
-                    <select
-                      value={formTypology}
-                      onChange={(e) => setFormTypology(e.target.value)}
-                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
-                    >
-                      <option>Luxury Residential Villa / Estate</option>
-                      <option>Commercial Tower / Mixed-Use</option>
-                      <option>Cultural Museum / Pavilion</option>
-                      <option>Infrastructure Bridge & Civic Works</option>
-                      <option>Urban Masterplan & District Design</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                      ESTIMATED PROJECT BUDGET:
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['$500K – $2M', '$2M – $10M', '$10M+ Enterprise'].map((budget) => (
-                        <button
-                          key={budget}
-                          type="button"
-                          onClick={() => setFormBudget(budget)}
-                          className={`p-2 rounded-sm border text-center font-mono text-[11px] font-semibold transition ${
-                            formBudget === budget
-                              ? 'bg-[#f05a36] text-white border-[#f05a36]'
-                              : 'bg-gray-50 text-gray-700 border-gray-300 hover:border-gray-400'
-                          }`}
-                        >
-                          {budget}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <form onSubmit={handleFormSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                        YOUR NAME / ORGANIZATION:
+                      <label className="block text-[10px] font-mono text-white/60 uppercase mb-2">
+                        CLIENT / PRINCIPAL NAME *
                       </label>
                       <input
                         type="text"
                         required
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        placeholder="e.g. Lorde Harrington"
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Lord / Lady / Dr. / Name"
+                        className="w-full bg-black/60 border border-white/20 p-3.5 text-sm text-white placeholder-white/30 focus:border-[#f05a36] focus:outline-none transition"
                       />
                     </div>
                     <div>
-                      <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                        PROJECT SITE LOCATION:
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formLocation}
-                        onChange={(e) => setFormLocation(e.target.value)}
-                        placeholder="City, Country (e.g. Geneva, Switzerland)"
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                        CORPORATE EMAIL:
+                      <label className="block text-[10px] font-mono text-white/60 uppercase mb-2">
+                        OFFICIAL EMAIL *
                       </label>
                       <input
                         type="email"
                         required
-                        value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
-                        placeholder="client@domain.com"
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                        PHONE NUMBER:
-                      </label>
-                      <input
-                        type="tel"
-                        value={formPhone}
-                        onChange={(e) => setFormPhone(e.target.value)}
-                        placeholder="+41 ..."
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="client@family-office.com"
+                        className="w-full bg-black/60 border border-white/20 p-3.5 text-sm text-white placeholder-white/30 focus:border-[#f05a36] focus:outline-none transition"
                       />
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-mono text-white/60 uppercase mb-2">
+                        COMMISSION TYPOLOGY
+                      </label>
+                      <select
+                        value={formData.typology}
+                        onChange={(e) => setFormData({ ...formData, typology: e.target.value })}
+                        className="w-full bg-black/60 border border-white/20 p-3.5 text-sm text-white focus:border-[#f05a36] focus:outline-none transition"
+                      >
+                        <option>Private Urban Villa</option>
+                        <option>Cliffside Cantilever Residence</option>
+                        <option>Lakefront Compound</option>
+                        <option>Metropolitan Penthouse</option>
+                        <option>Cultural Pavilion</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono text-white/60 uppercase mb-2">
+                        ESTIMATED BUDGET ALLOCATION
+                      </label>
+                      <select
+                        value={formData.budget}
+                        onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                        className="w-full bg-black/60 border border-white/20 p-3.5 text-sm text-white focus:border-[#f05a36] focus:outline-none transition"
+                      >
+                        <option>$5M — $15M USD</option>
+                        <option>$15M — $30M USD</option>
+                        <option>$30M — $60M+ USD</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="font-mono text-[10px] uppercase tracking-wider text-gray-600 font-bold block mb-1.5">
-                      PROJECT BRIEF & AMBITION:
+                    <label className="block text-[10px] font-mono text-white/60 uppercase mb-2">
+                      COMMISSION NARRATIVE & SITE BRIEF
                     </label>
                     <textarea
-                      rows={3}
-                      value={formBrief}
-                      onChange={(e) => setFormBrief(e.target.value)}
-                      placeholder="Describe your architectural ambition, timeline, and site constraints..."
-                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm font-sans text-xs text-[#1f242e] focus:outline-none focus:border-[#f05a36]"
+                      rows={4}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder="Site topography, zoning parameters, cantilever desires, architectural aspirations..."
+                      className="w-full bg-black/60 border border-white/20 p-3.5 text-sm text-white placeholder-white/30 focus:border-[#f05a36] focus:outline-none transition"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#f05a36] hover:bg-[#1f242e] text-white font-bold text-xs uppercase tracking-widest rounded-sm transition shadow-md shadow-[#f05a36]/20 flex items-center justify-center space-x-2"
+                    className="w-full py-4 bg-[#f05a36] hover:bg-[#d94827] text-white font-mono uppercase text-xs tracking-[0.25em] font-bold transition shadow-[0_0_30px_rgba(240,90,54,0.4)]"
                   >
-                    <span>Transmit Architectural Commission Brief</span>
-                    <ArrowRight className="w-4 h-4" />
+                    Submit Architectural Commission Brief &rarr;
                   </button>
                 </form>
               )}
             </div>
           </div>
-        </main>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          FOOTER: HAUTE LUXURY MAGAZINE EDITORIAL FOOTER
-         ───────────────────────────────────────────────────────────── */}
-      <footer className="bg-[#1f242e] text-white border-t-4 border-[#f05a36] py-12 px-4 sm:px-6 lg:px-8 mt-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8 text-xs">
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2.5">
-              <span className="text-xl font-mono text-[#f05a36] font-bold">ATV</span>
-              <span className="font-serif text-sm font-bold tracking-widest uppercase text-white">
-                ATELIER VANGUARD
-              </span>
-            </div>
-            <p className="text-gray-400 leading-relaxed font-sans">
-              Contemporary architectural monuments, parametric computational towers, and structural masterworks. Built to endure across centuries.
-            </p>
-            <span className="font-mono text-[10px] text-[#f05a36] block">
-              ZURICH • MILANO • TOKYO • NEW YORK
-            </span>
-          </div>
-
-          <div className="space-y-2 font-sans">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#f05a36] font-bold block mb-2">
-              SUB-PAGE DIRECTORY
-            </span>
-            <ul className="space-y-1.5 text-gray-300 font-serif">
-              <li><button onClick={() => setCurrentSubPage('home')} className="hover:text-[#f05a36] transition">01. Home & 3D Video Experience</button></li>
-              <li><button onClick={() => setCurrentSubPage('works')} className="hover:text-[#f05a36] transition">02. Selected Built Works</button></li>
-              <li><button onClick={() => setCurrentSubPage('studios')} className="hover:text-[#f05a36] transition">03. Global Studios & World Clocks</button></li>
-              <li><button onClick={() => setCurrentSubPage('about')} className="hover:text-[#f05a36] transition">04. Leadership & Philosophy</button></li>
-              <li><button onClick={() => setCurrentSubPage('inquiry')} className="hover:text-[#f05a36] transition">05. Commission Inquiries</button></li>
-            </ul>
-          </div>
-
-          <div className="space-y-2 font-sans">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#f05a36] font-bold block mb-2">
-              GLOBAL STUDIOS DIRECT
-            </span>
-            <ul className="space-y-1.5 text-gray-400 font-mono text-[11px]">
-              <li>Zurich HQ: +41 44 288 9000</li>
-              <li>Milano Atelier: +39 02 8901 3340</li>
-              <li>Tokyo Robotics Lab: +81 3 5468 1120</li>
-              <li>New York Flagship: +1 212 755 8890</li>
-            </ul>
-          </div>
-
-          <div className="space-y-3 font-sans">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#f05a36] font-bold block mb-1">
-              COMMISSION INQUIRY
-            </span>
-            <p className="text-gray-400 text-xs leading-relaxed">
-              Connect with our partners for private residential or civic commercial commissions worldwide.
-            </p>
-            <button
-              onClick={() => setIsConsultationModalOpen(true)}
-              className="w-full py-2 bg-[#f05a36] hover:bg-white hover:text-black text-white text-xs font-mono font-bold rounded-sm transition"
-            >
-              Schedule Partner Consultation
-            </button>
-          </div>
         </div>
+      </section>
 
-        <div className="max-w-7xl mx-auto border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between text-gray-500 font-mono text-[10px]">
-          <span>&copy; 2026 ATELIER VANGUARD ARCHITECTS. ALL RIGHTS RESERVED.</span>
-          <span>100% SEO OPTIMIZED • THREE.JS 3D TIMELAPSE • UNBOXED EDITORIAL PLATFORM</span>
+
+      {/* ========================================================================= */}
+      {/* 8. FOOTER (Deep Charcoal #0b0d11 - Seamless Match with Whole Website)      */}
+      {/* ========================================================================= */}
+      <footer className="w-full py-16 px-6 lg:px-14 border-t border-white/10 bg-[#08090d] text-white/60 text-xs font-mono">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 border border-[#f05a36] flex items-center justify-center text-[#f05a36] text-[10px] font-bold">
+              AV
+            </div>
+            <span className="text-white font-bold tracking-widest">
+              ATELIER VANGUARD ARCHITECTS &copy; 2026
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-6 text-[11px]">
+            <button onClick={() => scrollToSection('hero')} className="hover:text-white transition">Back to Top ↑</button>
+            <button onClick={onBackToCanvas} className="hover:text-[#f05a36] transition">Open Studio Canvas 🎨</button>
+            <button onClick={onOpenCodeModal} className="hover:text-[#f05a36] transition">Export Clean Code ⚡</button>
+          </div>
         </div>
       </footer>
-
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL 1: CONSULTATION / CALL BOOKING MODAL
-         ───────────────────────────────────────────────────────────── */}
-      {isConsultationModalOpen && (
-        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-sm max-w-lg w-full p-6 shadow-2xl space-y-4 relative text-xs">
-            <button
-              onClick={() => {
-                setIsConsultationModalOpen(false);
-                setConsultationSubmitted(false);
-              }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black p-1 rounded-sm bg-gray-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center space-x-2 text-[#f05a36] font-mono text-[11px] font-bold">
-              <Phone className="w-4 h-4" />
-              <span>CONFIDENTIAL PARTNER CALL</span>
-            </div>
-
-            <h3 className="font-serif text-xl font-bold text-[#1f242e]">
-              Schedule a Strategic Architecture Consultation
-            </h3>
-
-            {consultationSubmitted ? (
-              <div className="p-6 text-center space-y-3">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-                <h4 className="font-bold text-gray-900 text-base">Consultation Request Confirmed</h4>
-                <p className="text-gray-600 text-xs">
-                  Our partner secretary will contact you within 24 hours to schedule the confidential video session.
-                </p>
-                <button
-                  onClick={() => {
-                    setIsConsultationModalOpen(false);
-                    setConsultationSubmitted(false);
-                  }}
-                  className="px-4 py-2 bg-[#f05a36] text-white rounded-sm font-bold text-xs"
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setConsultationSubmitted(true);
-                }}
-                className="space-y-3.5"
-              >
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">YOUR FULL NAME:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Lorde Harrington"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">EMAIL ADDRESS:</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@domain.com"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">PREFERRED STUDIO / TIME ZONE:</label>
-                  <select className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900">
-                    <option>Zurich HQ (CET / Central European)</option>
-                    <option>Milano Atelier (CET)</option>
-                    <option>Tokyo Robotics Lab (JST)</option>
-                    <option>New York Americas (EST)</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#f05a36] hover:bg-[#1f242e] text-white font-bold uppercase tracking-wider rounded-sm transition shadow-md"
-                >
-                  Confirm Video Strategy Consultation
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL 2: ADD CUSTOM PROJECT MODAL
-         ───────────────────────────────────────────────────────────── */}
-      {isAddProjectModalOpen && (
-        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-sm max-w-lg w-full p-6 shadow-2xl space-y-4 relative text-xs max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setIsAddProjectModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black p-1 rounded-sm bg-gray-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center space-x-2 text-[#f05a36] font-mono text-[11px] font-bold">
-              <Plus className="w-4 h-4" />
-              <span>NEW ARCHITECTURAL COMMISSION</span>
-            </div>
-
-            <h3 className="font-serif text-xl font-bold text-[#1f242e]">
-              Publish Custom Project to Live Portfolio
-            </h3>
-
-            <form onSubmit={handleAddNewProject} className="space-y-3.5">
-              <div>
-                <label className="font-mono text-[10px] text-gray-600 block mb-1">PROJECT TITLE:</label>
-                <input
-                  type="text"
-                  required
-                  value={newProjTitle}
-                  onChange={(e) => setNewProjTitle(e.target.value)}
-                  placeholder="e.g. Alpine Cantilever Research Observatory"
-                  className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">TYPOLOGY CATEGORY:</label>
-                  <select
-                    value={newProjCategory}
-                    onChange={(e) => setNewProjCategory(e.target.value)}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  >
-                    <option value="commercial">Commercial High-Rise</option>
-                    <option value="residential">Luxury Villas</option>
-                    <option value="cultural">Cultural & Museums</option>
-                    <option value="infrastructure">Infrastructure & Bridges</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">LOCATION (CITY, COUNTRY):</label>
-                  <input
-                    type="text"
-                    value={newProjLocation}
-                    onChange={(e) => setNewProjLocation(e.target.value)}
-                    placeholder="e.g. Reykjavik, Iceland"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">COMPLETION YEAR:</label>
-                  <input
-                    type="text"
-                    value={newProjYear}
-                    onChange={(e) => setNewProjYear(e.target.value)}
-                    placeholder="2026"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-gray-600 block mb-1">TOTAL AREA (M²):</label>
-                  <input
-                    type="text"
-                    value={newProjArea}
-                    onChange={(e) => setNewProjArea(e.target.value)}
-                    placeholder="14,500 m²"
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-mono text-[10px] text-gray-600 block mb-1">IMAGE URL (OR LEAVE BLANK FOR DEFAULT):</label>
-                <input
-                  type="text"
-                  value={newProjImage}
-                  onChange={(e) => setNewProjImage(e.target.value)}
-                  placeholder="https://... or /images/architecture/..."
-                  className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                />
-              </div>
-
-              <div>
-                <label className="font-mono text-[10px] text-gray-600 block mb-1">PROJECT DESCRIPTION:</label>
-                <textarea
-                  rows={3}
-                  value={newProjDesc}
-                  onChange={(e) => setNewProjDesc(e.target.value)}
-                  placeholder="Describe the architectural thesis, structural feats, and materials..."
-                  className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-sm text-gray-900"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-[#f05a36] hover:bg-[#1f242e] text-white font-bold uppercase tracking-wider rounded-sm transition shadow-md"
-              >
-                Add to Live Portfolio
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL 3: PROJECT DETAIL INSPECTION MODAL
-         ───────────────────────────────────────────────────────────── */}
-      {selectedProject && (
-        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-sm max-w-2xl w-full p-6 shadow-2xl space-y-4 relative text-xs max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setSelectedProject(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black p-1 rounded-sm bg-gray-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="relative aspect-[16/9] rounded-sm overflow-hidden bg-gray-100">
-              <img
-                src={selectedProject.image}
-                alt={selectedProject.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-md font-mono text-[10px] text-[#f05a36] font-bold border border-gray-200">
-                PROJECT #{selectedProject.number}
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="font-mono text-[10px] text-[#f05a36] uppercase font-bold tracking-widest block">
-                {selectedProject.category} • {selectedProject.year}
-              </span>
-              <h3 className="font-serif text-2xl font-bold text-[#1f242e]">
-                {selectedProject.title}
-              </h3>
-              <span className="font-mono text-xs text-gray-600 flex items-center space-x-1">
-                <MapPin className="w-3.5 h-3.5 text-[#f05a36]" />
-                <span>{selectedProject.location}</span>
-              </span>
-            </div>
-
-            <p className="text-xs text-gray-700 font-sans leading-relaxed text-justify">
-              {selectedProject.description}
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 border-t border-gray-200 font-mono text-[10px]">
-              <div className="p-2.5 bg-gray-50 border border-gray-200">
-                <span className="text-gray-500 block">TOTAL AREA:</span>
-                <span className="text-[#1f242e] font-bold">{selectedProject.area}</span>
-              </div>
-              <div className="p-2.5 bg-gray-50 border border-gray-200">
-                <span className="text-gray-500 block">STRUCTURAL HEIGHT:</span>
-                <span className="text-[#1f242e] font-bold">{selectedProject.height}</span>
-              </div>
-              <div className="p-2.5 bg-gray-50 border border-gray-200 col-span-2 sm:col-span-1">
-                <span className="text-gray-500 block">LEAD ARCHITECT:</span>
-                <span className="text-[#f05a36] font-bold">{selectedProject.leadArchitect}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
+}
