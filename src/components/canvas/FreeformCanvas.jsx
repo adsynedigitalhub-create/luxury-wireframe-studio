@@ -317,12 +317,6 @@ export const FreeformCanvas = () => {
               <div
                 key={el.id}
                 onMouseDown={(e) => handleElementMouseDown(e, el)}
-                onDoubleClick={(e) => {
-                  if (el.type === 'vector' || el.type === 'shape' || el.isShapeFrame || el.type === 'image') {
-                    e.stopPropagation();
-                    triggerImageUpload(el.id);
-                  }
-                }}
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -479,22 +473,6 @@ export const FreeformCanvas = () => {
                           />
                         )}
                       </svg>
-
-                      {/* Canva-Style Quick Embed Photo Overlay */}
-                      {!el.imageUrl && (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerImageUpload(el.id);
-                          }}
-                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 border-2 border-dashed border-[#c5a059] p-2 text-center cursor-pointer transition hover:bg-black/75"
-                          title="Click to embed photo into this shape frame"
-                        >
-                          <Upload className="w-5 h-5 text-[#c5a059] mb-1" />
-                          <span className="text-[10px] font-mono text-[#c5a059] font-bold">Embed Photo</span>
-                          <span className="text-[9px] font-sans text-gray-400">Click or drop image</span>
-                        </div>
-                      )}
                     </div>
                   );
                 })()}
@@ -612,6 +590,47 @@ export const FreeformCanvas = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
+                )}
+
+                {/* 7. SPLINE & 3D INTERACTIVE MESH */}
+                {el.type === 'spline-3d' && (
+                  <div className="w-full h-full rounded-2xl overflow-hidden relative border border-[#c5a059]/40 bg-[#0d0f14] shadow-2xl group flex flex-col pointer-events-auto">
+                    {/* Header badge */}
+                    <div className="absolute top-2 left-3 z-10 flex items-center space-x-2 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 pointer-events-none">
+                      <span className="w-2 h-2 rounded-full bg-[#c5a059] animate-pulse" />
+                      <span className="text-[10px] font-mono text-[#f5ecd5] font-semibold tracking-wider uppercase">
+                        {el.title || '3D Spline Scene'}
+                      </span>
+                      <span className="text-[8px] font-mono text-[#c5a059] px-1 bg-[#c5a059]/20 rounded">
+                        Interactive
+                      </span>
+                    </div>
+
+                    {/* Interactive 3D Spline iframe embed */}
+                    {el.embedUrl ? (
+                      <iframe
+                        src={el.embedUrl}
+                        frameBorder="0"
+                        width="100%"
+                        height="100%"
+                        className="w-full h-full border-none rounded-2xl pointer-events-auto"
+                        title={el.title}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#181b24] to-[#0d0e12]">
+                        <img
+                          src={el.fallbackPreview}
+                          alt={el.title}
+                          className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <span className="px-3 py-1.5 rounded-lg bg-[#c5a059] text-black font-bold text-xs shadow-lg">
+                            3D Model Active
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* ACTIVE SELECTION TOOLBAR & RESIZE HANDLES */}

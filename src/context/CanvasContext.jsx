@@ -7,44 +7,102 @@ import { EXPANDED_FONTS, loadGoogleFont } from '../data/expandedFonts';
 import { CANVA_LINES } from '../data/canvaLinesAndFlourishes';
 import { PREMADE_CANVAS_TEMPLATES } from '../data/premadeCanvasTemplates';
 import { SHAPE_FRAMES } from '../data/shapeFrames';
+import { SPLINE_3D_PRESETS } from '../data/spline3dPresets';
 
 const STORAGE_KEY = 'lumina_freeform_canvas_v5';
+
+const DEFAULT_STARTER_ELEMENTS = [
+  {
+    id: 'elem-bg-panel',
+    type: 'shape',
+    shapeType: 'rectangle',
+    x: 60,
+    y: 60,
+    width: 1320,
+    height: 840,
+    opacity: 100,
+    zIndex: 1,
+    bgType: 'gradient',
+    bgGradient: { from: '#15171d', to: '#0d0e12', angle: 145 },
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2b303d'
+  },
+  {
+    id: 'elem-hero-img',
+    type: 'image',
+    x: 760,
+    y: 120,
+    width: 560,
+    height: 720,
+    opacity: 100,
+    zIndex: 2,
+    imageUrl: CURATED_IMAGES[0].url,
+    imageAlt: 'Editorial Portrait',
+    borderRadius: 16
+  },
+  {
+    id: 'elem-headline-1',
+    type: 'text',
+    x: 120,
+    y: 200,
+    width: 600,
+    height: 180,
+    opacity: 100,
+    zIndex: 3,
+    text: 'Poetry in Form & Solitude',
+    fontFamily: '"Cormorant Garamond", serif',
+    fontSize: 70,
+    fontWeight: '300',
+    textColor: '#f5f2eb',
+    textAlign: 'left',
+    letterSpacing: '-0.02em'
+  }
+];
+
+const readSavedCanvas = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.warn('Could not read saved canvas:', e);
+  }
+  return null;
+};
 
 const CanvasContext = createContext(null);
 
 export const CanvasProvider = ({ children }) => {
-  const [pan, setPan] = useState({ x: 80, y: 60 });
-  const [zoom, setZoom] = useState(0.85);
+  const savedState = readSavedCanvas();
+  const [pan, setPan] = useState(savedState?.pan || { x: 80, y: 60 });
+  const [zoom, setZoom] = useState(savedState?.zoom ?? 0.85);
   const [activeTool, setActiveTool] = useState('select'); // 'select' | 'hand'
 
-  const [canvasBg, setCanvasBg] = useState({
-    type: 'gradient',
-    solidColor: '#0c0d0e',
-    gradient: {
-      from: '#121418',
-      to: '#08080a',
-      angle: 135
+  const [canvasBg, setCanvasBg] = useState(
+    savedState?.canvasBg || {
+      type: 'gradient',
+      solidColor: '#0c0d0e',
+      gradient: {
+        from: '#121418',
+        to: '#08080a',
+        angle: 135
+      }
     }
-  });
+  );
 
-  const [canvasDimensions, setCanvasDimensions] = useState({
-    width: 1440,
-    height: 960
-  });
+  const [canvasDimensions, setCanvasDimensions] = useState(
+    savedState?.canvasDimensions || {
+      width: 1440,
+      height: 960
+    }
+  );
 
   const [elements, setElements] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.elements && parsed.elements.length > 0) {
-          return parsed.elements;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not read saved canvas:', e);
+    if (savedState && Array.isArray(savedState.elements)) {
+      return savedState.elements;
     }
-
     return [
       {
         id: 'elem-bg-panel',
@@ -152,27 +210,45 @@ export const CanvasProvider = ({ children }) => {
 
   const selectedElement = elements.find(el => el.id === selectedElementId) || null;
 
-  // Add Device Mockup (MacBook, iPhone, iPad, Browser)
-  const addMockupElement = (mockupPreset) => {
-    const preset = mockupPreset || MOCKUP_PRESETS[0];
+  // Add 3D Spline Interactive Element
+  const addSplineElement = (preset) => {
+    const p = preset || SPLINE_3D_PRESETS[0];
     const newEl = {
-      id: `mockup-${Date.now()}`,
-      type: 'mockup',
-      mockupType: preset.mockupType,
-      name: preset.name,
-      x: 180 - pan.x * 0.15,
-      y: 140 - pan.y * 0.15,
-      width: preset.width || 800,
-      height: preset.height || 500,
+      id: `spline-${Date.now()}`,
+      type: 'spline-3d',
+      title: p.title,
+      category: p.category,
+      embedUrl: p.embedUrl,
+      fallbackPreview: p.fallbackPreview,
+      meshType: p.meshType,
+      x: Math.max(60, 240 - pan.x * 0.2),
+      y: Math.max(60, 160 - pan.y * 0.2),
+      width: p.width || 480,
+      height: p.height || 440,
       opacity: 100,
       zIndex: elements.length + 1,
-      deviceColor: preset.deviceColor || '#14161c',
-      borderColor: preset.borderColor || '#2b303e',
-      screenImage: preset.defaultScreenImage || CURATED_IMAGES[0].url,
-      browserUrl: 'https://maisondor-atelier.com'
+      rotation: 0
     };
     setElements(prev => [...prev, newEl]);
     setSelectedElementId(newEl.id);
+  };
+
+  // Reset to default starter canvas
+  const resetToDefaultCanvas = () => {
+    setElements(DEFAULT_STARTER_ELEMENTS);
+    setCanvasBg({
+      type: 'gradient',
+      solidColor: '#0c0d0e',
+      gradient: {
+        from: '#121418',
+        to: '#08080a',
+        angle: 135
+      }
+    });
+    setCanvasDimensions({ width: 1440, height: 960 });
+    setPan({ x: 80, y: 60 });
+    setZoom(0.85);
+    setSelectedElementId(null);
   };
 
   // Update Mockup Screen Image
@@ -1711,6 +1787,8 @@ export const CanvasProvider = ({ children }) => {
         duplicateElement,
         changeZIndex,
         clearCanvas,
+        resetToDefaultCanvas,
+        addSplineElement,
         lastSavedTime
       }}
     >

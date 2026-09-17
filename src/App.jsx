@@ -14,9 +14,10 @@ import { OnboardingModal } from './components/modals/OnboardingModal';
 import { AnimationsModal } from './components/modals/AnimationsModal';
 import { Typography31Modal } from './components/modals/Typography31Modal';
 import { AdventureWireframeSite } from './components/expedition/AdventureWireframeSite';
+import { ArchitectureMonographSite } from './components/architecture/ArchitectureMonographSite';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState('studio'); // 'studio' | 'adventure-site'
+  const [currentView, setCurrentView] = useState('architecture'); // 'architecture' | 'studio' | 'adventure-site'
   const [isLinesOpen, setIsLinesOpen] = useState(false);
   const [isGridsAndShapesOpen, setIsGridsAndShapesOpen] = useState(false);
   const [initialShapesTab, setInitialShapesTab] = useState('grids');
@@ -71,6 +72,46 @@ function AppContent() {
       'cursor-glow': false
     });
   };
+
+  if (currentView === 'architecture') {
+    return (
+      <>
+        {/* Floating View Switcher Bar */}
+        <div className="fixed top-3 right-4 z-[60] flex items-center bg-[#181b24]/90 backdrop-blur-md p-1 rounded-xl border border-[#2c3242] shadow-2xl">
+          <div className="flex items-center space-x-1.5 px-3 py-1 bg-[#f05a36] text-white font-bold text-xs rounded-lg shadow-sm">
+            <span>🏛️</span>
+            <span>Architecture Monograph</span>
+          </div>
+          <button
+            onClick={() => setCurrentView('studio')}
+            className="flex items-center space-x-1.5 px-3 py-1 text-gray-300 hover:text-white text-xs font-sans rounded-lg transition"
+            title="Switch to Studio Canvas"
+          >
+            <span>🎨</span>
+            <span>Studio</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('adventure-site')}
+            className="flex items-center space-x-1.5 px-3 py-1 text-gray-300 hover:text-white text-xs font-sans rounded-lg transition"
+            title="Switch to Russian Adventure Site"
+          >
+            <span>🏔️</span>
+            <span>Adventure</span>
+          </button>
+        </div>
+
+        <ArchitectureMonographSite
+          onBackToCanvas={() => setCurrentView('studio')}
+          onOpenCodeModal={() => setIsCodeModalOpen(true)}
+        />
+
+        <CodeGeneratorModal
+          isOpen={isCodeModalOpen}
+          onClose={() => setIsCodeModalOpen(false)}
+        />
+      </>
+    );
+  }
 
   if (currentView === 'adventure-site') {
     return (
