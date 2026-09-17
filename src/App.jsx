@@ -15,6 +15,7 @@ import { AnimationsModal } from './components/modals/AnimationsModal';
 import { Typography31Modal } from './components/modals/Typography31Modal';
 import { AdventureWireframeSite } from './components/expedition/AdventureWireframeSite';
 import { ArchitectureMonographSite } from './components/architecture/ArchitectureMonographSite';
+import { VeridanRealEstateSite } from './components/architecture/VeridanRealEstateSite';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('architecture'); // 'architecture' | 'studio' | 'adventure-site'
@@ -100,10 +101,7 @@ function AppContent() {
           </button>
         </div>
 
-        <ArchitectureMonographSite
-          onBackToCanvas={() => setCurrentView('studio')}
-          onOpenCodeModal={() => setIsCodeModalOpen(true)}
-        />
+        <VeridanRealEstateSite />
 
         <CodeGeneratorModal
           isOpen={isCodeModalOpen}
