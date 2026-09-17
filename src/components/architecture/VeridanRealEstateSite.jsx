@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function VeridanRealEstateSite() {
   const [activeRoom, setActiveRoom] = useState('living');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [modalSubmitted, setModalSubmitted] = useState(false);
+  const [activeFloorLevel, setActiveFloorLevel] = useState('exploded'); // 'ground' | 'first' | 'second' | 'exploded'
+  const [activeMapPin, setActiveMapPin] = useState(null);
   const [bookingData, setBookingData] = useState({ name: '', email: '', phone: '', date: '', time: 'Morning (10:00 AM)' });
+
+  // Custom Cursor Position
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const rooms = [
     {
@@ -38,6 +53,13 @@ export function VeridanRealEstateSite() {
     }
   ];
 
+  const mapPins = [
+    { id: 'center', label: 'Downtown City Center', time: '8 min drive', x: '58%', y: '42%', desc: 'Financial district, corporate headquarters, and high-end shopping.' },
+    { id: 'beach', label: 'Private Beachfront & Marina', time: '5 min walk', x: '35%', y: '68%', desc: 'Direct slip yacht access, private cabanas, and pristine ocean waters.' },
+    { id: 'school', label: 'St. Andrews Prep Academy', time: '6 min drive', x: '45%', y: '25%', desc: 'Top-ranked international prep school with Olympic sports facilities.' },
+    { id: 'airport', label: 'Executive Private Jetport', time: '18 min drive', x: '78%', y: '30%', desc: '24/7 private jet handling and customs clearance terminal.' }
+  ];
+
   const currentRoomObj = rooms.find(r => r.id === activeRoom) || rooms[0];
 
   const scrollToSection = (id) => {
@@ -50,14 +72,48 @@ export function VeridanRealEstateSite() {
     setModalSubmitted(true);
   };
 
+  // Virtual 360 Tour drag rotation
+  const [tourAngle, setTourAngle] = useState(0);
+  const tourDragRef = useRef(false);
+  const tourStartX = useRef(0);
+
+  const handleTourMouseDown = (e) => {
+    tourDragRef.current = true;
+    tourStartX.current = e.clientX;
+  };
+  const handleTourMouseMove = (e) => {
+    if (!tourDragRef.current) return;
+    const delta = e.clientX - tourStartX.current;
+    tourStartX.current = e.clientX;
+    setTourAngle(prev => prev + delta * 0.4);
+  };
+  const handleTourMouseUp = () => {
+    tourDragRef.current = false;
+  };
+
   return (
-    <div className="min-h-screen bg-[#07111B] text-[#FBFBF8] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#D4AF37] selection:text-[#0B1E2D] antialiased">
-      
+    <div
+      onMouseEnter={() => setIsHovering(true)}
+      className="min-h-screen bg-[#07111B] text-[#FBFBF8] font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#D4AF37] selection:text-[#0B1E2D] antialiased cursor-default"
+    >
+      {/* CUSTOM LUXURY GOLD CURSOR */}
+      <div
+        className="fixed pointer-events-none z-[100] w-3 h-3 rounded-full bg-[#D4AF37] shadow-[0_0_15px_#D4AF37] -translate-x-1/2 -translate-y-1/2 transition-transform duration-75 hidden md:block"
+        style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
+      />
+      <div
+        className="fixed pointer-events-none z-[99] w-9 h-9 rounded-full border border-[#D4AF37]/40 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out hidden md:block"
+        style={{
+          left: `${mousePos.x}px`,
+          top: `${mousePos.y}px`,
+          transform: `translate(-50%, -50%) scale(${isHovering ? 1.25 : 1})`
+        }}
+      />
+
       {/* ========================================================================= */}
-      {/* GLOBAL HEADER: VERIDAN REAL ESTATE                                        */}
+      {/* GLOBAL HEADER                                                             */}
       {/* ========================================================================= */}
       <header className="fixed top-0 left-0 right-0 z-50 px-6 lg:px-14 py-4 flex items-center justify-between bg-[#0B1E2D]/90 border-b border-white/10 backdrop-blur-md transition-all">
-        {/* Brand Logo */}
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#997A15] flex items-center justify-center text-[#0B1E2D] font-bold text-sm font-['Playfair_Display',serif] shadow-[0_0_15px_rgba(212,175,55,0.4)]">
             V
@@ -72,7 +128,6 @@ export function VeridanRealEstateSite() {
           </div>
         </div>
 
-        {/* Navigation Links */}
         <nav className="hidden md:flex items-center space-x-8 text-xs font-mono tracking-widest uppercase text-[#FBFBF8]/80">
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-[#D4AF37] transition">Home</button>
           <button onClick={() => scrollToSection('arrival')} className="hover:text-[#D4AF37] transition">Arrival</button>
@@ -82,7 +137,6 @@ export function VeridanRealEstateSite() {
           <button onClick={() => scrollToSection('contact')} className="hover:text-[#D4AF37] transition">Contact</button>
         </nav>
 
-        {/* CTA Button & Price Tag */}
         <div className="flex items-center space-x-4">
           <span className="hidden lg:inline-block font-mono text-xs text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-3 py-1 rounded-full border border-[#D4AF37]/30">
             $24,500,000 USD
@@ -98,24 +152,25 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 1. HERO SECTION (100% CRYSTAL-CLEAR PHOTO, ZERO BLUR FILTER)              */}
+      {/* 1. HERO SECTION                                                           */}
       {/* ========================================================================= */}
       <section id="hero" className="relative w-full h-screen min-h-[750px] flex flex-col justify-between overflow-hidden border-b border-white/10 pt-24 pb-8 px-6 lg:px-14">
-        
-        {/* Fullscreen Hero Background Image - 100% CRISP, NO BLUR */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/architecture/urban_villa_exterior.jpg"
             alt="Veridan Luxury Estate Exterior"
-            className="w-full h-full object-cover select-none filter brightness-[0.95] contrast-[1.05]"
+            className="w-full h-full object-cover select-none filter brightness-[0.98] contrast-[1.05]"
           />
-          {/* Subtle bottom edge gradient ONLY so the crystal photo remains vibrant */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#07111B] via-transparent to-black/30 pointer-events-none" />
         </div>
 
-        {/* Hero Floating Editorial Card (Clean glass box leaving photo visible) */}
         <div className="relative z-10 flex-1 flex flex-col justify-center max-w-xl my-auto">
-          <div className="p-8 sm:p-10 rounded-2xl bg-[#0B1E2D]/85 border border-white/15 backdrop-blur-md shadow-2xl space-y-5">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="p-8 sm:p-10 rounded-2xl bg-[#0B1E2D]/85 border border-white/15 backdrop-blur-md shadow-2xl space-y-5"
+          >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase font-bold">
                 EXCLUSIVE LISTING // VILLA AETHELGARD
@@ -142,16 +197,16 @@ export function VeridanRealEstateSite() {
                 Explore Property &rarr;
               </button>
               <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-6 py-3.5 border border-white/30 hover:border-[#D4AF37] text-white font-mono text-xs uppercase tracking-[0.15em] rounded-full transition"
+                onClick={() => setIsTourOpen(true)}
+                className="px-6 py-3.5 border border-white/30 hover:border-[#D4AF37] text-white font-mono text-xs uppercase tracking-[0.15em] rounded-full transition flex items-center space-x-2"
               >
-                Private Tour
+                <span>🌐</span>
+                <span>Launch 360° Tour</span>
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Bottom Status Bar */}
         <div className="relative z-10 w-full flex items-center justify-between text-xs font-mono text-[#FBFBF8]/70 pt-4 border-t border-white/15">
           <div className="flex items-center space-x-2 cursor-pointer hover:text-[#D4AF37] transition" onClick={() => scrollToSection('arrival')}>
             <span className="w-4 h-6 rounded-full border border-white/40 flex items-start justify-center p-1">
@@ -168,11 +223,9 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 2. LOCATION / ARRIVAL (100% CRISP HIGHWAY & ESTATE PHOTO)                 */}
+      {/* 2. LOCATION / ARRIVAL                                                     */}
       {/* ========================================================================= */}
       <section id="arrival" className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden border-b border-white/10 py-20 px-6 lg:px-14">
-        
-        {/* Fullscreen Road Arrival Visual - 100% RAZOR-SHARP */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/veridan/veridan_road_arrival.jpg"
@@ -183,8 +236,6 @@ export function VeridanRealEstateSite() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Floating Editorial Narrative Card */}
           <div className="lg:col-span-7 p-8 sm:p-10 rounded-2xl bg-[#0B1E2D]/85 border border-white/15 backdrop-blur-md shadow-2xl space-y-5">
             <span className="text-[11px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase font-bold block">
               OUR LOCATION // SCENIC ARRIVAL
@@ -207,7 +258,6 @@ export function VeridanRealEstateSite() {
             </button>
           </div>
 
-          {/* Right Floating Commute Distance Cards */}
           <div className="lg:col-span-5 flex flex-col space-y-3">
             {[
               { icon: '🏙️', label: 'Downtown City Center', time: '5 min' },
@@ -229,7 +279,6 @@ export function VeridanRealEstateSite() {
               </div>
             ))}
           </div>
-
         </div>
 
         <div className="relative z-10 w-full flex justify-end text-xs font-mono text-[#D4AF37] tracking-widest font-bold pt-4 border-t border-white/15">
@@ -239,11 +288,9 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 3. INTERIOR SHOWCASE (100% RAZOR-SHARP ROOM ENVIRONMENT CHANGING)         */}
+      {/* 3. INTERIOR SHOWCASE                                                      */}
       {/* ========================================================================= */}
       <section id="interior" className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden border-b border-white/10 py-20 px-6 lg:px-14">
-        
-        {/* Crisp Dynamic Room Background */}
         <div className="absolute inset-0 z-0">
           <AnimatePresence mode="wait">
             <motion.img
@@ -261,8 +308,6 @@ export function VeridanRealEstateSite() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Left Narrative Card */}
           <div className="lg:col-span-7 p-8 sm:p-10 rounded-2xl bg-[#0B1E2D]/85 border border-white/15 backdrop-blur-md shadow-2xl space-y-5">
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-ping" />
@@ -287,14 +332,14 @@ export function VeridanRealEstateSite() {
             </div>
 
             <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-7 py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#B89020] text-[#0B1E2D] font-mono text-xs font-bold uppercase tracking-[0.2em] rounded-full transition shadow-lg hover:scale-105"
+              onClick={() => setIsTourOpen(true)}
+              className="px-7 py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#B89020] text-[#0B1E2D] font-mono text-xs font-bold uppercase tracking-[0.2em] rounded-full transition shadow-lg hover:scale-105 flex items-center space-x-2"
             >
-              Take a Virtual Tour &rarr;
+              <span>🌐</span>
+              <span>Open 360° Virtual Tour &rarr;</span>
             </button>
           </div>
 
-          {/* Right Room Selector Thumbnails */}
           <div className="lg:col-span-5 flex flex-col space-y-3">
             {rooms.map((room) => {
               const isSelected = activeRoom === room.id;
@@ -321,7 +366,6 @@ export function VeridanRealEstateSite() {
               );
             })}
           </div>
-
         </div>
 
         <div className="relative z-10 w-full flex justify-end text-xs font-mono text-[#D4AF37] tracking-widest font-bold pt-4 border-t border-white/15">
@@ -331,7 +375,7 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 4. 3D EXPLODED FLOOR PLAN & FEATURES (CRYSTAL-CLEAR 3D RENDER)            */}
+      {/* 4. 3D EXPLODED FLOOR PLAN WITH INTERACTIVE LEVEL TOGGLES                   */}
       {/* ========================================================================= */}
       <section id="features" className="relative w-full py-28 px-6 lg:px-14 bg-[#091522] border-b border-white/10">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -345,14 +389,31 @@ export function VeridanRealEstateSite() {
                 Property Features & 3D Plan
               </h2>
             </div>
-            <p className="mt-4 md:mt-0 text-xs sm:text-sm font-mono text-neutral-400 max-w-md text-right">
-              4,200 Sq Ft luxury living with 3 separated vertical levels, private roof terrace, and cantilever infinity pool.
-            </p>
+            
+            {/* Interactive Floor Level Buttons */}
+            <div className="flex items-center space-x-2 mt-4 md:mt-0">
+              {[
+                { id: 'exploded', label: 'Exploded All' },
+                { id: 'ground', label: 'Ground Floor' },
+                { id: 'first', label: 'First Floor' },
+                { id: 'second', label: 'Roof Terrace' }
+              ].map((lvl) => (
+                <button
+                  key={lvl.id}
+                  onClick={() => setActiveFloorLevel(lvl.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase transition ${
+                    activeFloorLevel === lvl.id
+                      ? 'bg-[#D4AF37] text-[#0B1E2D] font-bold shadow-md'
+                      : 'bg-white/10 text-white/70 hover:text-white'
+                  }`}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            
-            {/* Feature Badges */}
             <div className="lg:col-span-5 space-y-6">
               <div className="grid grid-cols-2 gap-3.5">
                 {[
@@ -378,15 +439,17 @@ export function VeridanRealEstateSite() {
                 ))}
               </div>
 
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full py-4 bg-gradient-to-r from-[#D4AF37] to-[#B89020] text-[#0B1E2D] font-mono text-xs font-bold uppercase tracking-[0.2em] rounded-full transition shadow-lg hover:scale-[1.02]"
-              >
-                Download Full Architectural Dossier &rarr;
-              </button>
+              <div className="p-4 rounded-xl bg-[#07111B] border border-[#D4AF37]/30 text-xs font-mono text-white/80 space-y-1">
+                <span className="text-[#D4AF37] font-bold block">SELECTED LEVEL: {activeFloorLevel.toUpperCase()}</span>
+                <span>
+                  {activeFloorLevel === 'ground' && 'Ground Level: Double-height living salon, open gourmet dining, pool patio, garage.'}
+                  {activeFloorLevel === 'first' && 'First Level: 4 Ensuite bedroom chambers, master sanctuary, private walk-in wardrobes.'}
+                  {activeFloorLevel === 'second' && 'Second Level: Rooftop cocktail terrace, outdoor kitchen, heated hydromassage spa.'}
+                  {activeFloorLevel === 'exploded' && 'Full 3-tier vertical exploded BIM rendering showing all functional volumes.'}
+                </span>
+              </div>
             </div>
 
-            {/* 3D Exploded Floor Plan Image - 100% Crisp */}
             <div className="lg:col-span-7 relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-[#07111B] p-2">
               <img
                 src="/images/veridan/veridan_exploded_floorplan.jpg"
@@ -394,7 +457,6 @@ export function VeridanRealEstateSite() {
                 className="w-full h-auto object-contain rounded-xl hover:scale-[1.02] transition-transform duration-500"
               />
             </div>
-
           </div>
 
           <div className="w-full flex justify-end text-xs font-mono text-[#D4AF37] tracking-widest font-bold pt-4 border-t border-white/10">
@@ -405,11 +467,9 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 5. LOCATION & SURROUNDINGS (100% RAZOR-SHARP 3D AERIAL MAP)                */}
+      {/* 5. LOCATION & SURROUNDINGS (WITH INTERACTIVE CLICKABLE PINS)              */}
       {/* ========================================================================= */}
       <section id="location" className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden border-b border-white/10 py-20 px-6 lg:px-14">
-        
-        {/* Fullscreen 3D Aerial Drone Map - 100% CRISP */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/veridan/veridan_aerial_map.jpg"
@@ -419,9 +479,27 @@ export function VeridanRealEstateSite() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#07111B] via-transparent to-black/30 pointer-events-none" />
         </div>
 
+        {/* Interactive Pulsing Map Pins directly on the 3D aerial map */}
+        {mapPins.map((pin) => (
+          <div
+            key={pin.id}
+            onClick={() => setActiveMapPin(pin)}
+            style={{ left: pin.x, top: pin.y }}
+            className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+          >
+            <div className="relative flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-[#D4AF37]/40 animate-ping absolute" />
+              <div className="w-5 h-5 rounded-full bg-[#D4AF37] border-2 border-white shadow-xl flex items-center justify-center text-[9px] font-bold text-black group-hover:scale-125 transition-transform">
+                📍
+              </div>
+            </div>
+            <div className="absolute left-1/2 -translate-x-1/2 top-7 whitespace-nowrap bg-black/85 border border-[#D4AF37]/50 px-2.5 py-1 rounded-md text-[10px] font-mono text-white pointer-events-none shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+              {pin.label} &bull; {pin.time}
+            </div>
+          </div>
+        ))}
+
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Left Narrative Card */}
           <div className="lg:col-span-7 p-8 sm:p-10 rounded-2xl bg-[#0B1E2D]/85 border border-white/15 backdrop-blur-md shadow-2xl space-y-5">
             <span className="text-[11px] font-mono tracking-[0.25em] text-[#D4AF37] uppercase font-bold block">
               THE SURROUNDINGS // 3D MAP EXPLORER
@@ -435,6 +513,13 @@ export function VeridanRealEstateSite() {
               Surrounded by turquoise ocean waters, private marinas, pristine beaches, and premier private golf clubs — with seamless direct arterial access to downtown and private executive airports.
             </p>
 
+            {activeMapPin && (
+              <div className="p-3.5 rounded-xl bg-black/70 border border-[#D4AF37] text-xs font-mono space-y-1">
+                <span className="text-[#D4AF37] font-bold block">PIN SELECTED: {activeMapPin.label} ({activeMapPin.time})</span>
+                <span className="text-white/80 block">{activeMapPin.desc}</span>
+              </div>
+            )}
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-7 py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#B89020] text-[#0B1E2D] font-mono text-xs font-bold uppercase tracking-[0.2em] rounded-full transition shadow-lg hover:scale-105"
@@ -443,7 +528,6 @@ export function VeridanRealEstateSite() {
             </button>
           </div>
 
-          {/* Right Floating Commute Badges */}
           <div className="lg:col-span-5 flex flex-col space-y-2.5">
             {[
               { icon: '🏫', label: 'Top Tier International Schools', time: '5 min' },
@@ -466,7 +550,6 @@ export function VeridanRealEstateSite() {
               </div>
             ))}
           </div>
-
         </div>
 
         <div className="relative z-10 w-full flex justify-end text-xs font-mono text-[#D4AF37] tracking-widest font-bold pt-4 border-t border-white/15">
@@ -476,11 +559,9 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* 6. FINAL CTA SECTION (NO BLUR, BRILLIANT CRISP SUNSET POOL)                */}
+      {/* 6. FINAL CTA SECTION                                                      */}
       {/* ========================================================================= */}
       <section id="contact" className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden py-24 px-6 lg:px-14">
-        
-        {/* Fullscreen Sunset Villa Background - 100% CLEAR, ZERO BLUR */}
         <div className="absolute inset-0 z-0">
           <img
             src="/images/architecture/urban_villa_exterior.jpg"
@@ -535,7 +616,7 @@ export function VeridanRealEstateSite() {
 
 
       {/* ========================================================================= */}
-      {/* FOOTER: VERIDAN REAL ESTATE                                               */}
+      {/* FOOTER                                                                    */}
       {/* ========================================================================= */}
       <footer className="w-full py-10 px-6 lg:px-14 border-t border-white/10 bg-[#07111B] text-xs font-mono text-[#FBFBF8]/60">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -561,6 +642,69 @@ export function VeridanRealEstateSite() {
           </div>
         </div>
       </footer>
+
+
+      {/* ========================================================================= */}
+      {/* 360° INTERACTIVE VIRTUAL TOUR FULLSCREEN MODAL                            */}
+      {/* ========================================================================= */}
+      {isTourOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 select-none"
+          onMouseDown={handleTourMouseDown}
+          onMouseMove={handleTourMouseMove}
+          onMouseUp={handleTourMouseUp}
+        >
+          {/* Header Bar */}
+          <div className="absolute top-6 left-6 right-6 z-30 flex items-center justify-between text-xs font-mono bg-black/75 border border-white/20 px-6 py-3 rounded-full backdrop-blur-md">
+            <div className="flex items-center space-x-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-pulse" />
+              <span className="font-bold text-white uppercase tracking-widest">360° VIRTUAL PANORAMA TOUR</span>
+              <span className="text-white/40">|</span>
+              <span className="text-[#D4AF37]">{currentRoomObj.name.toUpperCase()}</span>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <span className="text-white/70 hidden sm:inline">🖱️ DRAG MOUSE TO LOOK AROUND 360°</span>
+              <button
+                onClick={() => setIsTourOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Panoramic Image Canvas with Smooth Rotation */}
+          <div className="relative w-full h-full overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing">
+            <img
+              src={currentRoomObj.image}
+              alt="360 Panorama"
+              style={{
+                transform: `scale(1.4) translateX(${tourAngle}px)`,
+                transition: tourDragRef.current ? 'none' : 'transform 0.2s ease-out'
+              }}
+              className="max-w-none w-[200vw] h-[100vh] object-cover pointer-events-none"
+            />
+          </div>
+
+          {/* Bottom Room Switcher Inside 360 Tour */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-3 bg-black/80 border border-white/20 p-2 rounded-full backdrop-blur-md">
+            {rooms.map((room) => (
+              <button
+                key={room.id}
+                onClick={(e) => { e.stopPropagation(); setActiveRoom(room.id); setTourAngle(0); }}
+                className={`px-4 py-1.5 rounded-full text-xs font-mono uppercase transition ${
+                  activeRoom === room.id
+                    ? 'bg-[#D4AF37] text-black font-bold shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                {room.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
 
       {/* ========================================================================= */}
