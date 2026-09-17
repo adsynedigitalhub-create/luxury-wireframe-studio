@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { InteractiveFuturistic3DVilla } from './InteractiveFuturistic3DVilla';
 
 export function ArchitectureMonographSite({ onBackToCanvas, onOpenCodeModal }) {
   // Pinned "lets-scroll" Container Ref
@@ -119,6 +120,7 @@ export function ArchitectureMonographSite({ onBackToCanvas, onOpenCodeModal }) {
 
         {/* Minimal Navigation (Clean labels, zero clutter, no numbers) */}
         <nav className="hidden md:flex items-center space-x-10 text-xs font-mono tracking-[0.2em] uppercase text-[#1b1d22]/80">
+          <button onClick={() => document.getElementById('interactive-3d').scrollIntoView({ behavior: 'smooth' })} className="text-[#f05a36] font-bold hover:underline transition flex items-center space-x-1"><span>🌐</span><span>3D Interactive</span></button>
           <button onClick={() => window.scrollTo({ top: window.innerHeight * 0.5, behavior: 'smooth' })} className="hover:text-[#f05a36] transition">Story</button>
           <button onClick={() => document.getElementById('villas-catalog').scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#f05a36] transition">Villas</button>
           <button onClick={() => document.getElementById('blueprint-section').scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#f05a36] transition">Blueprint</button>
@@ -292,6 +294,35 @@ export function ArchitectureMonographSite({ onBackToCanvas, onOpenCodeModal }) {
         </div>
       </div>
 
+
+      {/* ========================================================================= */}
+      {/* 2.5 REAL-TIME 3D FUTURISTIC INTERACTIVE VILLA (WEBGL 60 FPS)              */}
+      {/* ========================================================================= */}
+      <section id="interactive-3d" className="w-full py-28 px-6 lg:px-16 border-t border-[#1b1d22]/10 bg-[#090b10] text-white">
+        <div className="max-w-7xl mx-auto space-y-8">
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6">
+            <div>
+              <div className="inline-flex items-center space-x-2 text-cyan-400 font-mono text-xs tracking-[0.25em] uppercase font-bold mb-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>// REAL-TIME WEBGL THREE.JS ENGINE</span>
+              </div>
+              <h2 className="font-['Syne',sans-serif] font-black text-3xl sm:text-5xl text-white tracking-tight uppercase">
+                Interactive 3D Villa Hologram
+              </h2>
+            </div>
+            <p className="mt-4 md:mt-0 text-xs sm:text-sm font-mono text-neutral-400 max-w-md text-right">
+              Mouse se 3D building ko 360° ghumayein, zoom-in/out karein, aur LiDAR laser scanlines ya structural X-Ray mode activate karein.
+            </p>
+          </div>
+
+          {/* Full Interactive 3D WebGL Canvas */}
+          <div className="w-full h-[650px] lg:h-[750px]">
+            <InteractiveFuturistic3DVilla />
+          </div>
+
+        </div>
+      </section>
 
       {/* ========================================================================= */}
       {/* 3. DISTINCT VILLAS CATALOG (NO REPETITION, UNIQUE DESIGNS)                */}
